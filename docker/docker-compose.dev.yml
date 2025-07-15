@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  database:
+    image: postgres:15-alpine
+    container_name: todomaster-postgres-dev
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: todomaster
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./packages/backend/database/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - todomaster-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d todomaster"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 后端服务
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: todomaster-backend-dev
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: todomaster
+      DB_USERNAME: admin
+      DB_PASSWORD: 123456
+      DB_SSL: false
+      JWT_SECRET: todomaster_jwt_secret_key_development_2024
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:5173
+      API_PREFIX: /api/v1
+    volumes:
+      - ./packages/backend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    networks:
+      - todomaster-network
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./packages/backend/src
+          target: /app/src
+        - action: rebuild
+          path: ./packages/backend/package.json
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: todomaster-frontend-dev
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:3000/api/v1
+    volumes:
+      - ./packages/frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - todomaster-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./packages/frontend/src
+          target: /app/src
+        - action: rebuild
+          path: ./packages/frontend/package.json
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  todomaster-network:
+    driver: bridge 

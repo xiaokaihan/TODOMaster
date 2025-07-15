@@ -1,0 +1,80 @@
+# 多阶段构建 - 后端生产环境优化版
+FROM node:18-alpine AS base
+
+# 安装必要的系统依赖
+RUN apk add --no-cache \
+    libc6-compat \
+    curl \
+    dumb-init \
+    postgresql-client
+
+# 创建应用用户
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 todomaster
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制根目录的package文件
+COPY package*.json yarn.lock* ./
+COPY packages/shared/package*.json ./packages/shared/
+COPY packages/backend/package*.json ./packages/backend/
+
+# 依赖安装阶段
+FROM base AS deps
+RUN npm ci --only=production && npm cache clean --force
+
+# 构建阶段
+FROM base AS builder
+# 安装所有依赖（包括开发依赖）
+RUN npm ci
+
+# 复制源代码
+COPY packages/shared ./packages/shared
+COPY packages/backend ./packages/backend
+
+# 构建共享包
+WORKDIR /app/packages/shared
+RUN npm run build
+
+# 构建后端
+WORKDIR /app/packages/backend
+RUN npm run build
+
+# 生产阶段
+FROM base AS production
+
+# 只复制生产依赖
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
+
+# 复制构建后的文件
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
+COPY --from=builder /app/packages/backend/package*.json ./packages/backend/
+
+# 复制数据库相关文件
+COPY --from=builder /app/packages/backend/database ./packages/backend/database
+
+# 创建日志目录
+RUN mkdir -p /app/logs && chown -R todomaster:nodejs /app
+
+# 设置用户
+USER todomaster
+
+# 设置工作目录
+WORKDIR /app/packages/backend
+
+# 暴露端口
+EXPOSE 3000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# 使用dumb-init作为PID 1
+ENTRYPOINT ["dumb-init", "--"]
+
+# 启动应用
+CMD ["node", "dist/server.js"]

@@ -1,0 +1,37 @@
+{
+  "name": "todomaster",
+  "version": "1.0.0",
+  "description": "个人任务管理系统 - 帮助用户清晰设定目标、智能规划任务并高效执行",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"yarn workspace @todomaster/backend dev\" \"yarn workspace @todomaster/frontend dev\"",
+    "build": "yarn workspace @todomaster/shared build && yarn workspace @todomaster/backend build && yarn workspace @todomaster/frontend build",
+    "start": "yarn workspace @todomaster/backend start",
+    "test": "yarn workspaces run test",
+    "lint": "yarn workspaces run lint",
+    "clean": "yarn workspaces run clean && rm -rf node_modules",
+    "db:migrate": "yarn workspace @todomaster/backend db:migrate",
+    "db:seed": "yarn workspace @todomaster/backend db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  },
+  "author": "TODOMaster Team",
+  "license": "MIT",
+  "keywords": [
+    "todo",
+    "task-management",
+    "productivity",
+    "goals",
+    "objectives"
+  ]
+}

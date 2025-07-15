@@ -1,0 +1,1660 @@
+openapi: 3.0.3
+info:
+  title: TODOMaster API
+  description: |
+    TODOMaster是一个基于OKR（Objectives and Key Results）方法论的任务管理系统。
+    本API提供了完整的用户管理、目标设置、关键结果跟踪和任务管理功能。
+  version: 1.0.0
+  contact:
+    name: TODOMaster Team
+    email: support@todomaster.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: 开发服务器
+  - url: https://api.todomaster.com/v1
+    description: 生产服务器
+
+tags:
+  - name: health
+    description: 健康检查相关接口
+  - name: auth
+    description: 认证相关接口
+  - name: users
+    description: 用户管理相关接口
+  - name: objectives
+    description: 目标管理相关接口
+  - name: key-results
+    description: 关键结果管理相关接口
+  - name: tasks
+    description: 任务管理相关接口
+  - name: stats
+    description: 统计数据相关接口
+
+security:
+  - bearerAuth: []
+
+paths:
+  # 健康检查
+  /health:
+    get:
+      tags: [health]
+      summary: 详细健康检查
+      security: []
+      responses:
+        '200':
+          description: 系统健康状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/database:
+    get:
+      tags: [health]
+      summary: 数据库健康检查
+      security: []
+      responses:
+        '200':
+          description: 数据库连接状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseHealthResponse'
+
+  # 认证
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: 用户登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # 用户管理
+  /users:
+    get:
+      tags: [users]
+      summary: 获取用户列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [user, admin]
+      responses:
+        '200':
+          description: 用户列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersListResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{id}:
+    get:
+      tags: [users]
+      summary: 获取用户详情
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 用户详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [users]
+      summary: 更新用户信息
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponse'
+
+    delete:
+      tags: [users]
+      summary: 删除用户
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /users/profile:
+    get:
+      tags: [users]
+      summary: 获取个人资料
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 个人资料
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+
+    put:
+      tags: [users]
+      summary: 更新个人资料
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+
+  /users/change-password:
+    post:
+      tags: [users]
+      summary: 修改密码
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: 密码修改成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  # 目标管理
+  /objectives:
+    get:
+      tags: [objectives]
+      summary: 获取目标列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, completed, archived]
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [work, personal, learning, health]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 目标列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectivesListResponse'
+
+    post:
+      tags: [objectives]
+      summary: 创建目标
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjectiveRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveDetailResponse'
+
+  /objectives/{id}:
+    get:
+      tags: [objectives]
+      summary: 获取目标详情
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 目标详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveDetailResponse'
+
+    put:
+      tags: [objectives]
+      summary: 更新目标
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateObjectiveRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveDetailResponse'
+
+    delete:
+      tags: [objectives]
+      summary: 删除目标
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /objectives/{id}/complete:
+    post:
+      tags: [objectives]
+      summary: 完成目标
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 完成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveDetailResponse'
+
+  /objectives/{id}/reopen:
+    post:
+      tags: [objectives]
+      summary: 重新打开目标
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 重新打开成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveDetailResponse'
+
+  # 关键结果管理
+  /key-results:
+    get:
+      tags: [key-results]
+      summary: 获取关键结果列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: objectiveId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, completed, archived]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 关键结果列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResultsListResponse'
+
+    post:
+      tags: [key-results]
+      summary: 创建关键结果
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKeyResultRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResultDetailResponse'
+
+  /key-results/{id}:
+    get:
+      tags: [key-results]
+      summary: 获取关键结果详情
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 关键结果详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResultDetailResponse'
+
+    put:
+      tags: [key-results]
+      summary: 更新关键结果
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKeyResultRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResultDetailResponse'
+
+    delete:
+      tags: [key-results]
+      summary: 删除关键结果
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /key-results/{id}/update-progress:
+    post:
+      tags: [key-results]
+      summary: 更新关键结果进度
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProgressRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResultDetailResponse'
+
+  /key-results/{id}/complete:
+    post:
+      tags: [key-results]
+      summary: 完成关键结果
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 完成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResultDetailResponse'
+
+  /key-results/{id}/reopen:
+    post:
+      tags: [key-results]
+      summary: 重新打开关键结果
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 重新打开成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResultDetailResponse'
+
+  # 任务管理
+  /tasks:
+    get:
+      tags: [tasks]
+      summary: 获取任务列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, cancelled]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+        - name: objectiveId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: keyResultId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 任务列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TasksListResponse'
+
+    post:
+      tags: [tasks]
+      summary: 创建任务
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+
+  /tasks/{id}:
+    get:
+      tags: [tasks]
+      summary: 获取任务详情
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 任务详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+
+    put:
+      tags: [tasks]
+      summary: 更新任务
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+
+    delete:
+      tags: [tasks]
+      summary: 删除任务
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /tasks/{id}/complete:
+    post:
+      tags: [tasks]
+      summary: 完成任务
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTaskRequest'
+      responses:
+        '200':
+          description: 完成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+
+  /tasks/{id}/reopen:
+    post:
+      tags: [tasks]
+      summary: 重新打开任务
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 重新打开成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+
+  /tasks/{id}/update-progress:
+    post:
+      tags: [tasks]
+      summary: 更新任务进度
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskProgressRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+
+  # 统计数据
+  /stats/dashboard:
+    get:
+      tags: [stats]
+      summary: 获取仪表板统计数据
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 仪表板统计数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStatsResponse'
+
+  /stats/objectives:
+    get:
+      tags: [stats]
+      summary: 获取目标统计数据
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 目标统计数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectiveStatsResponse'
+
+  /stats/tasks:
+    get:
+      tags: [stats]
+      summary: 获取任务统计数据
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, cancelled]
+      responses:
+        '200':
+          description: 任务统计数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatsResponse'
+
+  /stats/productivity:
+    get:
+      tags: [stats]
+      summary: 获取生产力统计数据
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, year]
+      responses:
+        '200':
+          description: 生产力统计数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductivityStatsResponse'
+
+  /stats/export:
+    get:
+      tags: [stats]
+      summary: 导出统计数据
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: 导出数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportDataResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # 基础模型
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        isActive:
+          type: boolean
+        timezone:
+          type: string
+        preferences:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+
+    Objective:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [work, personal, learning, health]
+        status:
+          type: string
+          enum: [active, completed, archived]
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    KeyResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [number, percentage, boolean]
+        currentValue:
+          type: number
+        targetValue:
+          type: number
+        unit:
+          type: string
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+        status:
+          type: string
+          enum: [active, completed, archived]
+        objectiveId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        estimatedHours:
+          type: number
+        actualHours:
+          type: number
+        dueDate:
+          type: string
+          format: date
+        completedAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        objectiveId:
+          type: string
+          format: uuid
+        keyResultId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    # 请求模型
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    CreateObjectiveRequest:
+      type: object
+      required:
+        - title
+        - category
+        - startDate
+        - endDate
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [work, personal, learning, health]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    UpdateObjectiveRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [active, completed, archived]
+
+    CreateKeyResultRequest:
+      type: object
+      required:
+        - title
+        - type
+        - targetValue
+        - objectiveId
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [number, percentage, boolean]
+        targetValue:
+          type: number
+        currentValue:
+          type: number
+          default: 0
+        unit:
+          type: string
+        objectiveId:
+          type: string
+          format: uuid
+
+    UpdateKeyResultRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        targetValue:
+          type: number
+        currentValue:
+          type: number
+        unit:
+          type: string
+
+    UpdateProgressRequest:
+      type: object
+      required:
+        - currentValue
+      properties:
+        currentValue:
+          type: number
+        notes:
+          type: string
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+        - objectiveId
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: medium
+        estimatedHours:
+          type: number
+        dueDate:
+          type: string
+          format: date
+        objectiveId:
+          type: string
+          format: uuid
+        keyResultId:
+          type: string
+          format: uuid
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        actualHours:
+          type: number
+
+    CompleteTaskRequest:
+      type: object
+      properties:
+        actualHours:
+          type: number
+        notes:
+          type: string
+
+    UpdateTaskProgressRequest:
+      type: object
+      properties:
+        actualHours:
+          type: number
+        notes:
+          type: string
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        isActive:
+          type: boolean
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        timezone:
+          type: string
+        preferences:
+          type: object
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+        - confirmPassword
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+        confirmPassword:
+          type: string
+
+    # 响应模型
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+
+    SuccessMessage:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+        message:
+          type: string
+        version:
+          type: string
+
+    DatabaseHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        responseTime:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    LoginResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                token:
+                  type: string
+                user:
+                  $ref: '#/components/schemas/User'
+
+    UsersListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                users:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/User'
+                pagination:
+                  $ref: '#/components/schemas/Pagination'
+
+    UserDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user:
+                  $ref: '#/components/schemas/User'
+
+    UserProfileResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    email:
+                      type: string
+                    name:
+                      type: string
+                    timezone:
+                      type: string
+                    preferences:
+                      type: object
+
+    ObjectivesListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                objectives:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Objective'
+                pagination:
+                  $ref: '#/components/schemas/Pagination'
+
+    ObjectiveDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                objective:
+                  $ref: '#/components/schemas/Objective'
+
+    KeyResultsListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                keyResults:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/KeyResult'
+                pagination:
+                  $ref: '#/components/schemas/Pagination'
+
+    KeyResultDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                keyResult:
+                  $ref: '#/components/schemas/KeyResult'
+
+    TasksListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                tasks:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Task'
+                pagination:
+                  $ref: '#/components/schemas/Pagination'
+
+    TaskDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                task:
+                  $ref: '#/components/schemas/Task'
+
+    DashboardStatsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                summary:
+                  type: object
+                  properties:
+                    totalObjectives:
+                      type: integer
+                    activeObjectives:
+                      type: integer
+                    completedObjectives:
+                      type: integer
+                    totalKeyResults:
+                      type: integer
+                    completedKeyResults:
+                      type: integer
+                    totalTasks:
+                      type: integer
+                    completedTasks:
+                      type: integer
+                    overallProgress:
+                      type: number
+                recentActivity:
+                  type: array
+                  items:
+                    type: object
+                upcomingDeadlines:
+                  type: array
+                  items:
+                    type: object
+
+    ObjectiveStatsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                summary:
+                  type: object
+                statusDistribution:
+                  type: object
+                categoryDistribution:
+                  type: object
+                progressDistribution:
+                  type: object
+
+    TaskStatsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                summary:
+                  type: object
+                statusDistribution:
+                  type: object
+                priorityDistribution:
+                  type: object
+                completionTrend:
+                  type: array
+
+    ProductivityStatsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                timeStats:
+                  type: object
+                completionRate:
+                  type: object
+                efficiencyMetrics:
+                  type: object
+                trends:
+                  type: object
+
+    ExportDataResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                exportData:
+                  type: object
+                exportDate:
+                  type: string
+                  format: date-time
+                format:
+                  type: string
+
+  responses:
+    Unauthorized:
+      description: 未认证
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "UNAUTHORIZED"
+              message: "认证失败"
+
+    Forbidden:
+      description: 权限不足
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "FORBIDDEN"
+              message: "权限不足"
+
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "NOT_FOUND"
+              message: "资源不存在"
+
+    ValidationError:
+      description: 数据验证失败
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "VALIDATION_ERROR"
+              message: "数据验证失败"
+              details:
+                field: "title"
+                message: "标题不能为空"
+
+    InternalServerError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "INTERNAL_SERVER_ERROR"
+              message: "服务器内部错误" 

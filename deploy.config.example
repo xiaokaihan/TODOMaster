@@ -1,0 +1,111 @@
+# TODOMaster 部署配置示例
+# 复制此文件为 .env.deploy 并填入实际值
+
+# ================================
+# GitHub Secrets 配置 (用于CI/CD)
+# ================================
+# 在 GitHub Repository > Settings > Secrets and variables > Actions 中添加以下变量:
+
+# Vercel 配置
+VERCEL_TOKEN=your_vercel_token_here
+VERCEL_ORG_ID=your_vercel_org_id_here  
+VERCEL_PROJECT_ID=your_vercel_project_id_here
+
+# Railway 配置
+RAILWAY_TOKEN=your_railway_token_here
+
+# ================================
+# 本地部署环境变量 (用于手动部署)
+# ================================
+# 设置这些环境变量用于本地执行部署脚本
+
+# Vercel CLI 配置
+export VERCEL_TOKEN="your_vercel_token_here"
+export VERCEL_ORG_ID="your_vercel_org_id_here"
+export VERCEL_PROJECT_ID="your_vercel_project_id_here"
+
+# Railway CLI 配置  
+export RAILWAY_TOKEN="your_railway_token_here"
+
+# ================================
+# 生产环境配置 (后端)
+# ================================
+# 这些变量需要在 Railway 控制台中设置
+
+NODE_ENV=production
+PORT=3000
+API_PREFIX=/api/v1
+
+# 数据库配置 (Supabase)
+DB_HOST=db.your-project.supabase.co
+DB_PORT=5432
+DB_NAME=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=your_supabase_password
+DB_SSL=true
+
+# JWT 配置
+JWT_SECRET=your_production_jwt_secret_min_32_chars
+JWT_EXPIRES_IN=7d
+
+# CORS 配置
+CORS_ORIGIN=https://your-app.vercel.app
+
+# ================================
+# 前端环境变量 (Vercel)
+# ================================
+# 这些变量会在构建时注入到前端
+
+VITE_API_URL=https://your-backend.railway.app/api/v1
+VITE_APP_NAME=TODOMaster
+VITE_APP_VERSION=1.0.0
+
+# ================================
+# 获取Token的方法
+# ================================
+
+# 1. Vercel Token:
+#    - 访问: https://vercel.com/account/tokens
+#    - 创建新token，命名为 "todomaster-deploy"
+#    - 复制token值
+
+# 2. Vercel Org ID & Project ID:
+#    - 在项目根目录运行: vercel
+#    - 查看 .vercel/project.json 文件
+#    - orgId 和 projectId 就在文件中
+
+# 3. Railway Token:
+#    - 访问: https://railway.app/account/tokens
+#    - 创建新token，命名为 "todomaster-deploy"
+#    - 复制token值
+
+# ================================
+# 部署前检查清单
+# ================================
+
+# □ 已在 GitHub 中设置所有 Secrets
+# □ 已在 Railway 中创建项目并添加PostgreSQL
+# □ 已在 Railway 中设置环境变量
+# □ 已在 Supabase 中创建数据库
+# □ 已运行数据库迁移
+# □ 已在 Vercel 中连接项目
+# □ 已测试本地构建流程
+
+# ================================
+# 常用命令
+# ================================
+
+# 手动部署:
+# ./scripts/deploy-vercel-railway.sh prod
+
+# 检查部署状态:
+# vercel ls
+# railway status
+
+# 查看日志:
+# railway logs
+# vercel logs
+
+# 回滚部署:
+# vercel rollback
+# railway rollback 

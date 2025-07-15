@@ -1,0 +1,45 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus自监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # TODOMaster后端监控
+  - job_name: 'todomaster-backend'
+    static_configs:
+      - targets: ['backend:3000']
+    metrics_path: '/health'
+    scrape_interval: 30s
+
+  # TODOMaster前端监控
+  - job_name: 'todomaster-frontend'
+    static_configs:
+      - targets: ['frontend:80']
+    metrics_path: '/health'
+    scrape_interval: 30s
+
+  # PostgreSQL监控（需要postgres_exporter）
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['database:5432']
+    scrape_interval: 30s
+
+  # Redis监控（需要redis_exporter）
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # 系统监控（需要node_exporter）
+  - job_name: 'node'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+    scrape_interval: 30s

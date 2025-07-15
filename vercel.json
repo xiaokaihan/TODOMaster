@@ -1,0 +1,14 @@
+{
+  "framework": "vite",
+  "buildCommand": "yarn workspace @todomaster/shared build && yarn workspace @todomaster/frontend build:vercel",
+  "outputDirectory": "packages/frontend/dist",
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
