@@ -762,7 +762,7 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@todomaster/backend@file:/Users/keyxiao/Documents/01-workspace/120-claude-code/TODOMaster/packages/backend":
+"@todomaster/backend@file:/Users/xiaokaihan/Documents/WorkSpace/01_Projects/cursor_project/TODOMaster/packages/backend":
   version "1.0.0"
   resolved "file:packages/backend"
   dependencies:
@@ -785,7 +785,7 @@
     winston "^3.11.0"
     zod "^3.22.4"
 
-"@todomaster/frontend@file:/Users/keyxiao/Documents/01-workspace/120-claude-code/TODOMaster/packages/frontend":
+"@todomaster/frontend@file:/Users/xiaokaihan/Documents/WorkSpace/01_Projects/cursor_project/TODOMaster/packages/frontend":
   version "1.0.0"
   resolved "file:packages/frontend"
   dependencies:
@@ -803,7 +803,13 @@
     zod "^3.22.4"
     zustand "^4.4.7"
 
-"@todomaster/shared@file:../shared", "@todomaster/shared@file:/Users/keyxiao/Documents/01-workspace/120-claude-code/TODOMaster/packages/shared":
+"@todomaster/shared@file:../shared":
+  version "1.0.0"
+  dependencies:
+    date-fns "^2.30.0"
+    zod "^3.22.4"
+
+"@todomaster/shared@file:/Users/xiaokaihan/Documents/WorkSpace/01_Projects/cursor_project/TODOMaster/packages/shared":
   version "1.0.0"
   resolved "file:packages/shared"
   dependencies:

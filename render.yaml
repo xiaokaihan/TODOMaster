@@ -1,0 +1,55 @@
+services:
+  # 后端 Web Service
+  - type: web
+    name: todomaster-backend
+    runtime: node
+    plan: free
+    region: oregon
+    env: node
+    buildCommand: |
+      cd packages/shared && npm install && npm run build &&
+      cd ../backend && npm install && npm run build
+    startCommand: cd packages/backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: API_PREFIX
+        value: /api/v1
+      - key: DB_HOST
+        fromDatabase:
+          name: todomaster-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: todomaster-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: todomaster-postgres
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: todomaster-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: todomaster-postgres
+          property: password
+      - key: DB_SSL
+        value: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        value: https://todomaster.vercel.app
+    healthCheckPath: /health
+
+databases:
+  # PostgreSQL 数据库
+  - name: todomaster-postgres
+    plan: free
+    databaseName: todomaster
+    user: todomaster 

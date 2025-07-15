@@ -1,4 +1,4 @@
-name: 🚀 Deploy to Production (Vercel + Railway)
+name: 🚀 Deploy to Production (Vercel + Render)
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
           npm run test
 
   deploy-backend:
-    name: 🔧 部署后端 (Railway)
+    name: 🔧 部署后端 (Render)
     runs-on: ubuntu-latest
     needs: test
     outputs:
@@ -79,22 +79,13 @@ jobs:
           cd packages/backend
           npm run build
 
-      - name: 🚀 部署到 Railway
+      - name: 🚀 部署到 Render
         id: deploy
         run: |
-          npm install -g @railway/cli
-          cd packages/backend
-          
-          # 部署到 Railway
-          railway up --detach
-          
-          # 等待部署完成并获取URL
-          sleep 30
-          BACKEND_URL=$(railway status --json | jq -r '.deployments[0].url' || echo "")
-          echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
-          echo "✅ 后端部署完成: $BACKEND_URL"
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          # Render 通过 Git hook 自动部署
+          # 这里我们设置输出URL（需要手动配置）
+          echo "url=${{ secrets.RENDER_BACKEND_URL }}" >> $GITHUB_OUTPUT
+          echo "✅ 后端部署已触发"
 
   deploy-frontend:
     name: 🎨 部署前端 (Vercel)
@@ -162,7 +153,7 @@ jobs:
           echo "🎉 部署完成！"
           echo "📋 部署信息:"
           echo "   - 环境: Production"
-          echo "   - 后端: Railway (${{ needs.deploy-backend.outputs.backend-url }})"
+          echo "   - 后端: Render (${{ needs.deploy-backend.outputs.backend-url }})"
           echo "   - 前端: Vercel"
           echo "   - 分支: ${{ github.ref_name }}"
           echo "   - 提交: ${{ github.sha }}"

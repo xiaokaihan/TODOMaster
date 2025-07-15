@@ -11,8 +11,8 @@ VERCEL_TOKEN=your_vercel_token_here
 VERCEL_ORG_ID=your_vercel_org_id_here  
 VERCEL_PROJECT_ID=your_vercel_project_id_here
 
-# Railway 配置
-RAILWAY_TOKEN=your_railway_token_here
+# Render 配置
+RENDER_BACKEND_URL=https://your-backend.onrender.com
 
 # ================================
 # 本地部署环境变量 (用于手动部署)
@@ -24,8 +24,9 @@ export VERCEL_TOKEN="your_vercel_token_here"
 export VERCEL_ORG_ID="your_vercel_org_id_here"
 export VERCEL_PROJECT_ID="your_vercel_project_id_here"
 
-# Railway CLI 配置  
-export RAILWAY_TOKEN="your_railway_token_here"
+# Render 配置  
+export RENDER_API_KEY="your_render_api_key_here"
+export RENDER_BACKEND_URL="https://your-backend.onrender.com"
 
 # ================================
 # 生产环境配置 (后端)
@@ -74,18 +75,18 @@ VITE_APP_VERSION=1.0.0
 #    - 查看 .vercel/project.json 文件
 #    - orgId 和 projectId 就在文件中
 
-# 3. Railway Token:
-#    - 访问: https://railway.app/account/tokens
-#    - 创建新token，命名为 "todomaster-deploy"
-#    - 复制token值
+# 3. Render API Key:
+#    - 访问: https://dashboard.render.com/user/settings
+#    - 在 API Keys 部分创建新的 API Key
+#    - 复制API Key值
 
 # ================================
 # 部署前检查清单
 # ================================
 
 # □ 已在 GitHub 中设置所有 Secrets
-# □ 已在 Railway 中创建项目并添加PostgreSQL
-# □ 已在 Railway 中设置环境变量
+# □ 已在 Render 中创建 Web Service
+# □ 已在 Render 中设置环境变量和PostgreSQL
 # □ 已在 Supabase 中创建数据库
 # □ 已运行数据库迁移
 # □ 已在 Vercel 中连接项目
@@ -96,16 +97,16 @@ VITE_APP_VERSION=1.0.0
 # ================================
 
 # 手动部署:
-# ./scripts/deploy-vercel-railway.sh prod
+# ./scripts/deploy-vercel-render.sh prod
 
 # 检查部署状态:
 # vercel ls
-# railway status
+# 在 Render Dashboard 查看服务状态
 
 # 查看日志:
-# railway logs
+# 在 Render Dashboard 查看日志
 # vercel logs
 
 # 回滚部署:
 # vercel rollback
-# railway rollback 
+# 在 Render Dashboard 手动回滚 
