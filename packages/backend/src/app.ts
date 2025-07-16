@@ -21,11 +21,36 @@ const app = express()
 app.use(helmet())
 
 // CORS 配置
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173', 
+  'http://127.0.0.1:3000',
+  'https://todomaster-frontend.vercel.app',
+  'file://' // 允许本地文件访问
+]
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // 允许空origin（比如移动应用或Postman）
+    if (!origin) return callback(null, true)
+    
+    // 检查origin是否在允许列表中，或者是file://协议
+    if (allowedOrigins.includes(origin) || origin.startsWith('file://')) {
+      return callback(null, true)
+    }
+    
+    // 生产环境允许来自环境变量的域名
+    if (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) {
+      return callback(null, true)
+    }
+    
+    callback(new Error('CORS策略不允许的来源'))
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 }))
 
 // 压缩中间件
