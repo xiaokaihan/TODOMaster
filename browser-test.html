@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODOMaster 后端API测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.success { background: #28a745; color: white; }
+        .status.error { background: #dc3545; color: white; }
+        .status.loading { background: #ffc107; color: black; }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 TODOMaster 后端API测试工具</h1>
+        <p><strong>API域名:</strong> <span id="apiUrl">https://todomaster-backend-1v0k.onrender.com</span></p>
+        <p><strong>状态:</strong> <span id="apiStatus" class="status loading">检测中...</span></p>
+    </div>
+
+    <!-- 基础健康检查 -->
+    <div class="container">
+        <div class="test-section">
+            <h2>1. 基础健康检查</h2>
+            <button onclick="testBasicHealth()">测试API基础状态</button>
+            <button onclick="testHealthEndpoints()">测试健康检查端点</button>
+            <div id="healthResult" class="result info" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- 用户认证测试 -->
+    <div class="container">
+        <div class="test-section">
+            <h2>2. 用户认证测试</h2>
+            
+            <h3>用户注册</h3>
+            <div class="form-group">
+                <label>邮箱:</label>
+                <input type="email" id="registerEmail" placeholder="test@example.com">
+            </div>
+            <div class="form-group">
+                <label>密码:</label>
+                <input type="password" id="registerPassword" placeholder="Test123456">
+            </div>
+            <div class="form-group">
+                <label>姓名:</label>
+                <input type="text" id="registerFirstName" placeholder="测试" value="测试">
+                <input type="text" id="registerLastName" placeholder="用户" value="用户">
+            </div>
+            <button onclick="testRegister()">测试用户注册</button>
+            
+            <h3>用户登录</h3>
+            <div class="form-group">
+                <label>邮箱:</label>
+                <input type="email" id="loginEmail" placeholder="test@example.com">
+            </div>
+            <div class="form-group">
+                <label>密码:</label>
+                <input type="password" id="loginPassword" placeholder="Test123456">
+            </div>
+            <button onclick="testLogin()">测试用户登录</button>
+            <button onclick="testGetCurrentUser()" id="getCurrentUserBtn" disabled>获取当前用户信息</button>
+            
+            <div id="authResult" class="result info" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- 核心功能测试 -->
+    <div class="container">
+        <div class="test-section">
+            <h2>3. 核心功能测试</h2>
+            <p><strong>Token状态:</strong> <span id="tokenStatus">未登录</span></p>
+            
+            <button onclick="testObjectives()" id="objectivesBtn" disabled>测试目标API</button>
+            <button onclick="testKeyResults()" id="keyResultsBtn" disabled>测试关键结果API</button>
+            <button onclick="testTasks()" id="tasksBtn" disabled>测试任务API</button>
+            <button onclick="testStats()" id="statsBtn" disabled>测试统计API</button>
+            
+            <div id="coreResult" class="result info" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- 安全性测试 -->
+    <div class="container">
+        <div class="test-section">
+            <h2>4. 安全性测试</h2>
+            <button onclick="testUnauthorizedAccess()">测试未授权访问</button>
+            <button onclick="testInvalidToken()">测试无效Token</button>
+            
+            <div id="securityResult" class="result info" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- 性能测试 -->
+    <div class="container">
+        <div class="test-section">
+            <h2>5. 性能测试</h2>
+            <button onclick="testPerformance()">测试API响应时间</button>
+            
+            <div id="performanceResult" class="result info" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://todomaster-backend-1v0k.onrender.com';
+        const API_URL = `${API_BASE}/api`;
+        let currentToken = '';
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            testBasicHealth();
+            // 生成随机邮箱
+            const randomEmail = `test_${Date.now()}@example.com`;
+            document.getElementById('registerEmail').value = randomEmail;
+            document.getElementById('loginEmail').value = randomEmail;
+        });
+
+        function updateApiStatus(status, message) {
+            const statusEl = document.getElementById('apiStatus');
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = message;
+        }
+
+        function showResult(elementId, content, type = 'info') {
+            const el = document.getElementById(elementId);
+            el.className = `result ${type}`;
+            el.textContent = content;
+            el.style.display = 'block';
+        }
+
+        function updateTokenStatus() {
+            const statusEl = document.getElementById('tokenStatus');
+            const buttons = ['objectivesBtn', 'keyResultsBtn', 'tasksBtn', 'statsBtn', 'getCurrentUserBtn'];
+            
+            if (currentToken) {
+                statusEl.textContent = '已登录 ✅';
+                statusEl.style.color = '#28a745';
+                buttons.forEach(id => {
+                    document.getElementById(id).disabled = false;
+                });
+            } else {
+                statusEl.textContent = '未登录 ❌';
+                statusEl.style.color = '#dc3545';
+                buttons.forEach(id => {
+                    document.getElementById(id).disabled = true;
+                });
+            }
+        }
+
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json().catch(() => ({}));
+                
+                return {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data,
+                    success: response.ok
+                };
+            } catch (error) {
+                return {
+                    status: 0,
+                    statusText: 'Network Error',
+                    data: { error: error.message },
+                    success: false
+                };
+            }
+        }
+
+        async function testBasicHealth() {
+            const result = await makeRequest(API_BASE);
+            
+            if (result.success) {
+                updateApiStatus('success', '✅ 运行中');
+                showResult('healthResult', 
+                    `✅ API服务器正常运行\n状态码: ${result.status}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                    'success');
+            } else {
+                updateApiStatus('error', '❌ 异常');
+                showResult('healthResult', 
+                    `❌ API服务器异常\n状态码: ${result.status}\n错误: ${result.statusText}`, 
+                    'error');
+            }
+        }
+
+        async function testHealthEndpoints() {
+            const endpoints = [
+                { name: '基础健康检查', url: `${API_URL}/health` },
+                { name: '系统状态', url: `${API_URL}/health/status` },
+                { name: '数据库连接', url: `${API_URL}/health/db` },
+                { name: '系统指标', url: `${API_URL}/health/metrics` }
+            ];
+
+            let results = '健康检查端点测试结果:\n\n';
+
+            for (const endpoint of endpoints) {
+                const result = await makeRequest(endpoint.url);
+                results += `${endpoint.name}: ${result.success ? '✅' : '❌'} (${result.status})\n`;
+                if (!result.success) {
+                    results += `  错误: ${result.data.error || result.statusText}\n`;
+                }
+            }
+
+            showResult('healthResult', results, 'info');
+        }
+
+        async function testRegister() {
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const firstName = document.getElementById('registerFirstName').value;
+            const lastName = document.getElementById('registerLastName').value;
+
+            if (!email || !password || !firstName || !lastName) {
+                showResult('authResult', '❌ 请填写所有注册字段', 'error');
+                return;
+            }
+
+            const result = await makeRequest(`${API_URL}/auth/register`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    email,
+                    password,
+                    confirmPassword: password,
+                    firstName,
+                    lastName
+                })
+            });
+
+            if (result.success) {
+                showResult('authResult', 
+                    `✅ 用户注册成功\n状态码: ${result.status}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                    'success');
+            } else {
+                showResult('authResult', 
+                    `❌ 用户注册失败\n状态码: ${result.status}\n错误: ${JSON.stringify(result.data, null, 2)}`, 
+                    'error');
+            }
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showResult('authResult', '❌ 请填写邮箱和密码', 'error');
+                return;
+            }
+
+            const result = await makeRequest(`${API_URL}/auth/login`, {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+
+            if (result.success && result.data.token) {
+                currentToken = result.data.token;
+                updateTokenStatus();
+                showResult('authResult', 
+                    `✅ 用户登录成功\n状态码: ${result.status}\nToken: ${currentToken.substring(0, 20)}...\n用户信息: ${JSON.stringify(result.data.user, null, 2)}`, 
+                    'success');
+            } else {
+                showResult('authResult', 
+                    `❌ 用户登录失败\n状态码: ${result.status}\n错误: ${JSON.stringify(result.data, null, 2)}`, 
+                    'error');
+            }
+        }
+
+        async function testGetCurrentUser() {
+            if (!currentToken) {
+                showResult('authResult', '❌ 请先登录获取Token', 'error');
+                return;
+            }
+
+            const result = await makeRequest(`${API_URL}/auth/me`, {
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`
+                }
+            });
+
+            if (result.success) {
+                showResult('authResult', 
+                    `✅ 获取当前用户信息成功\n状态码: ${result.status}\n用户信息: ${JSON.stringify(result.data, null, 2)}`, 
+                    'success');
+            } else {
+                showResult('authResult', 
+                    `❌ 获取用户信息失败\n状态码: ${result.status}\n错误: ${JSON.stringify(result.data, null, 2)}`, 
+                    'error');
+            }
+        }
+
+        async function testObjectives() {
+            const result = await makeRequest(`${API_URL}/objectives`, {
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`
+                }
+            });
+
+            showResult('coreResult', 
+                `目标API测试结果:\n状态码: ${result.status}\n${result.success ? '✅ 成功' : '❌ 失败'}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                result.success ? 'success' : 'error');
+        }
+
+        async function testKeyResults() {
+            const result = await makeRequest(`${API_URL}/key-results`, {
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`
+                }
+            });
+
+            showResult('coreResult', 
+                `关键结果API测试结果:\n状态码: ${result.status}\n${result.success ? '✅ 成功' : '❌ 失败'}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                result.success ? 'success' : 'error');
+        }
+
+        async function testTasks() {
+            const result = await makeRequest(`${API_URL}/tasks`, {
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`
+                }
+            });
+
+            showResult('coreResult', 
+                `任务API测试结果:\n状态码: ${result.status}\n${result.success ? '✅ 成功' : '❌ 失败'}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                result.success ? 'success' : 'error');
+        }
+
+        async function testStats() {
+            const result = await makeRequest(`${API_URL}/stats/overview`, {
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`
+                }
+            });
+
+            showResult('coreResult', 
+                `统计API测试结果:\n状态码: ${result.status}\n${result.success ? '✅ 成功' : '❌ 失败'}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                result.success ? 'success' : 'error');
+        }
+
+        async function testUnauthorizedAccess() {
+            const result = await makeRequest(`${API_URL}/objectives`);
+
+            if (result.status === 401) {
+                showResult('securityResult', 
+                    `✅ 未授权访问保护正常\n状态码: ${result.status}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                    'success');
+            } else {
+                showResult('securityResult', 
+                    `❌ 未授权访问保护异常\n状态码: ${result.status}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                    'error');
+            }
+        }
+
+        async function testInvalidToken() {
+            const result = await makeRequest(`${API_URL}/objectives`, {
+                headers: {
+                    'Authorization': 'Bearer invalid_token_123'
+                }
+            });
+
+            if (result.status === 401) {
+                showResult('securityResult', 
+                    `✅ 无效Token保护正常\n状态码: ${result.status}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                    'success');
+            } else {
+                showResult('securityResult', 
+                    `❌ 无效Token保护异常\n状态码: ${result.status}\n响应: ${JSON.stringify(result.data, null, 2)}`, 
+                    'error');
+            }
+        }
+
+        async function testPerformance() {
+            showResult('performanceResult', '正在测试API响应时间...', 'info');
+            
+            const startTime = performance.now();
+            const result = await makeRequest(`${API_URL}/health`);
+            const endTime = performance.now();
+            const responseTime = Math.round(endTime - startTime);
+
+            let message = `API响应时间测试结果:\n响应时间: ${responseTime}ms\n`;
+            
+            if (responseTime < 1000) {
+                message += `✅ 响应时间优秀 (< 1000ms)`;
+                showResult('performanceResult', message, 'success');
+            } else if (responseTime < 2000) {
+                message += `⚠️ 响应时间良好 (< 2000ms)`;
+                showResult('performanceResult', message, 'info');
+            } else {
+                message += `❌ 响应时间较慢 (>= 2000ms)`;
+                showResult('performanceResult', message, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 
