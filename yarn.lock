@@ -768,6 +768,14 @@
   dependencies:
     "@prisma/client" "^5.7.1"
     "@todomaster/shared" "file:../shared"
+    "@types/bcrypt" "^5.0.2"
+    "@types/bcryptjs" "^2.4.6"
+    "@types/compression" "^1.7.5"
+    "@types/cors" "^2.8.17"
+    "@types/express" "^4.17.21"
+    "@types/jsonwebtoken" "^9.0.9"
+    "@types/morgan" "^1.9.9"
+    "@types/node" "^20.10.5"
     "@types/pg" "^8.15.4"
     bcrypt "^6.0.0"
     bcryptjs "^2.4.3"
@@ -782,6 +790,7 @@
     morgan "^1.10.0"
     pg "^8.16.0"
     prisma "^5.7.1"
+    typescript "^5.3.3"
     winston "^3.11.0"
     zod "^3.22.4"
 
@@ -803,13 +812,7 @@
     zod "^3.22.4"
     zustand "^4.4.7"
 
-"@todomaster/shared@file:../shared":
-  version "1.0.0"
-  dependencies:
-    date-fns "^2.30.0"
-    zod "^3.22.4"
-
-"@todomaster/shared@file:/Users/xiaokaihan/Documents/WorkSpace/01_Projects/cursor_project/TODOMaster/packages/shared":
+"@todomaster/shared@file:../shared", "@todomaster/shared@file:/Users/xiaokaihan/Documents/WorkSpace/01_Projects/cursor_project/TODOMaster/packages/shared":
   version "1.0.0"
   resolved "file:packages/shared"
   dependencies:
@@ -1835,12 +1838,7 @@ combined-stream@^1.0.8:
   dependencies:
     delayed-stream "~1.0.0"
 
-commander@^11.1.0:
-  version "11.1.0"
-  resolved "https://registry.npmjs.org/commander/-/commander-11.1.0.tgz"
-  integrity sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==
-
-commander@^4.0.0:
+commander@^11.1.0, commander@^4.0.0:
   version "4.1.1"
   resolved "https://registry.npmjs.org/commander/-/commander-4.1.1.tgz"
   integrity sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==
