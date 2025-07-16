@@ -157,19 +157,26 @@ export const apiRequest = async <T>(
     
     // 处理错误响应
     if (!response.ok) {
+      // 检查是否是标准错误格式 { success: false, error: { message, ... } }
+      const errorMessage = data.error?.message || data.message || `请求失败: ${response.status}`
+      const errors = data.error?.errors || data.errors
+      
       throw new ApiError(
-        data.message || `请求失败: ${response.status}`,
+        errorMessage,
         response.status,
-        data.errors
+        errors
       )
     }
     
     // 检查业务逻辑错误
     if (data.success === false) {
+      const errorMessage = data.error?.message || data.message || '请求失败'
+      const errors = data.error?.errors || data.errors
+      
       throw new ApiError(
-        data.message || '请求失败',
+        errorMessage,
         response.status,
-        data.errors
+        errors
       )
     }
     

@@ -29,7 +29,7 @@ echo ""
 
 # 检查前端状态
 echo "🌐 检查前端应用状态..."
-FRONTEND_URL="https://todomaster-frontend.vercel.app"
+FRONTEND_URL="https://todomaster-6sp0sx9z8-xiaokaihans-projects.vercel.app"
 
 if curl -s --max-time 10 -I "$FRONTEND_URL" > /dev/null; then
     echo "✅ 前端应用正常运行: $FRONTEND_URL"

@@ -107,24 +107,38 @@ const Register: React.FC = () => {
       console.error('注册失败:', error)
       
       // 处理特定错误
-      if (error.status === 409) {
-        setErrors({ email: '该邮箱已被注册' })
-      } else if (error.status === 400 && error.errors) {
+      if (error.status === 400) {
+        // 检查是否是邮箱已注册错误
+        if (error.message && error.message.includes('邮箱已被注册')) {
+          setErrors({ email: error.message })
+          return
+        }
+        
         // 处理字段验证错误
-        const fieldErrors: Partial<RegisterForm> = {}
-        error.errors.forEach((err: string) => {
-          if (err.includes('邮箱')) {
-            fieldErrors.email = err
-          } else if (err.includes('密码')) {
-            fieldErrors.password = err
-          } else if (err.includes('名字')) {
-            fieldErrors.firstName = err
-          } else if (err.includes('姓氏')) {
-            fieldErrors.lastName = err
-          }
-        })
-        setErrors(fieldErrors)
+        if (error.errors && Array.isArray(error.errors)) {
+          const fieldErrors: Partial<RegisterForm> = {}
+          error.errors.forEach((err: string) => {
+            if (err.includes('邮箱')) {
+              fieldErrors.email = err
+            } else if (err.includes('密码')) {
+              fieldErrors.password = err
+            } else if (err.includes('名字')) {
+              fieldErrors.firstName = err
+            } else if (err.includes('姓氏')) {
+              fieldErrors.lastName = err
+            }
+          })
+          setErrors(fieldErrors)
+          return
+        }
+        
+        // 显示通用错误消息
+        showError(error.message || '注册失败，请检查输入信息')
+      } else if (error.status === 409) {
+        // 409 冲突状态码（备用处理）
+        setErrors({ email: error.message || '该邮箱已被注册' })
       } else {
+        // 其他错误
         showError(error.message || '注册失败，请稍后重试')
       }
     } finally {
