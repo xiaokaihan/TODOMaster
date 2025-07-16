@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
@@ -53,7 +53,7 @@ const limiter = rateLimit({
 app.use(limiter)
 
 // 健康检查端点
-app.get('/health', async (req, res) => {
+app.get('/health', async (req: Request, res: Response) => {
   try {
     const dbConnected = await testConnection()
     res.json({
@@ -85,7 +85,7 @@ app.use(`${apiPrefix}/stats`, statsRoutes)
 app.use(`${apiPrefix}/health`, healthRoutes)
 
 // API 根路径信息
-app.get(apiPrefix, (req, res) => {
+app.get(apiPrefix, (req: Request, res: Response) => {
   res.json({
     message: 'TODOMaster API',
     version: '1.0.0',
@@ -102,7 +102,7 @@ app.get(apiPrefix, (req, res) => {
 })
 
 // 根路径
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.json({
     message: 'TODOMaster API Server',
     status: 'running',
