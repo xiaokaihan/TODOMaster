@@ -110,12 +110,12 @@ export class ObjectiveService {
     await del(`/objectives/${id}`)
   }
 
-  // 映射前端分类到后端格式
+  // 映射前端分类到后端格式（前后端枚举已一致，直接返回）
   private static mapCategoryToBackend(category: ObjectiveCategory): string {
-    return category.toUpperCase()
+    return category
   }
 
-  // 映射后端分类到前端格式
+  // 映射后端分类到前端格式（前后端枚举已一致，直接返回）
   private static mapCategoryFromBackend(category: string): ObjectiveCategory {
     return category as ObjectiveCategory
   }

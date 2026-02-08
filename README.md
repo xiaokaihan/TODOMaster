@@ -272,13 +272,25 @@ yarn workspace @todomaster/frontend test
 yarn workspace @todomaster/backend test
 ```
 
-## 📚 API 文档
+## 📚 文档
 
+### API 文档
 API 文档位于 `docs/api/` 目录，包含：
 - 认证接口
 - 目标管理接口
 - 任务管理接口
 - 用户统计接口
+
+### 部署文档
+- [部署架构总览](./DEPLOYMENT.md) - 当前部署方案（Vercel + Render）
+- [Vercel 前端部署指南](./docs/VERCEL_DEPLOYMENT.md) - Vercel 部署详细说明
+- [Render 后端部署指南](./docs/DEPLOYMENT_RENDER.md) - Render 后端部署详细说明
+- [Docker 部署指南](./docker/README.md) - Docker 容器化部署
+
+### 其他文档
+- [TODO 列表](./TODO.md) - 项目待办事项
+- [PostgreSQL 设置指南（macOS）](./docs/POSTGRESQL_SETUP_MACOS.md) - 本地数据库设置
+- [API 测试结果](./docs/API_COMPREHENSIVE_TEST_RESULTS.md) - API 测试报告
 
 ## 🚢 部署
 

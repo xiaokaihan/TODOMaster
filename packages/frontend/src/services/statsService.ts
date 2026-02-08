@@ -183,7 +183,7 @@ function buildQueryString(params: Record<string, any>): string {
 export class StatsService {
   // 获取仪表板统计数据
   static async getDashboardStats() {
-    return await get('/stats/dashboard')
+    return await get('/stats/overview')
   }
 
   // 获取生产力统计

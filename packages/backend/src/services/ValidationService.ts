@@ -34,9 +34,9 @@ export class ValidationService {
     return uuidRegex.test(uuid)
   }
 
-  // 目标分类验证
+  // 目标分类验证（与数据库枚举保持一致）
   static validateObjectiveCategory(category: string): boolean {
-    const validCategories = ['WORK', 'PERSONAL', 'HEALTH', 'LEARNING', 'FINANCE', 'OTHER']
+    const validCategories = ['PERSONAL', 'PROFESSIONAL', 'HEALTH', 'LEARNING', 'FINANCIAL', 'RELATIONSHIP', 'CREATIVE', 'OTHER']
     return validCategories.includes(category)
   }
 

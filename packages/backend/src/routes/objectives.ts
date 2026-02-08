@@ -54,7 +54,7 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
   const objectivesQuery = `
     SELECT 
       id, title, description, category, status, progress, 
-      start_date, target_date, created_at, updated_at
+      start_date, end_date, created_at, updated_at
     FROM objectives 
     ${whereClause}
     ORDER BY created_at DESC
@@ -74,7 +74,7 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
         status: obj.status,
         progress: parseFloat(obj.progress),
         startDate: obj.start_date,
-        endDate: obj.target_date,
+        endDate: obj.end_date,
         createdAt: obj.created_at,
         updatedAt: obj.updated_at
       })),
@@ -100,7 +100,7 @@ router.get('/:id', authenticate, asyncHandler(async (req: Request, res: Response
   const objectiveQuery = `
     SELECT 
       o.id, o.title, o.description, o.category, o.status, o.progress, 
-      o.start_date, o.target_date, o.created_at, o.updated_at,
+      o.start_date, o.end_date, o.created_at, o.updated_at,
       COALESCE(
         json_agg(
           DISTINCT jsonb_build_object(
@@ -145,7 +145,7 @@ router.get('/:id', authenticate, asyncHandler(async (req: Request, res: Response
     LEFT JOIN tasks t ON kr.id = t.key_result_id
     WHERE o.id = $1 AND o.user_id = $2
     GROUP BY o.id, o.title, o.description, o.category, o.status, o.progress,
-             o.start_date, o.target_date, o.created_at, o.updated_at
+             o.start_date, o.end_date, o.created_at, o.updated_at
   `
 
   const result = await pool.query(objectiveQuery, [id, req.user.id])
@@ -167,7 +167,7 @@ router.get('/:id', authenticate, asyncHandler(async (req: Request, res: Response
         status: objective.status,
         progress: parseFloat(objective.progress),
         startDate: objective.start_date,
-        endDate: objective.target_date,
+        endDate: objective.end_date,
         keyResults: objective.key_results,
         tasks: objective.tasks,
         createdAt: objective.created_at,
@@ -195,7 +195,7 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
     throw createValidationError('标题长度必须至少为3个字符')
   }
 
-  // 验证分类
+  // 验证分类（与数据库枚举保持一致）
   const validCategories = ['PERSONAL', 'PROFESSIONAL', 'HEALTH', 'LEARNING', 'FINANCIAL', 'RELATIONSHIP', 'CREATIVE', 'OTHER']
   if (!validCategories.includes(category)) {
     throw createValidationError('无效的目标分类')
@@ -213,9 +213,9 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
 
     // 创建目标
     const objectiveResult = await client.query(`
-      INSERT INTO objectives (user_id, title, description, category, start_date, target_date)
+      INSERT INTO objectives (user_id, title, description, category, start_date, end_date)
       VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, title, description, category, status, progress, start_date, target_date, created_at
+      RETURNING id, title, description, category, status, progress, start_date, end_date, created_at
     `, [req.user.id, title.trim(), description, category, startDate || null, endDate || null])
 
     const objective = objectiveResult.rows[0]
@@ -237,7 +237,7 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
           status: objective.status,
           progress: parseFloat(objective.progress),
           startDate: objective.start_date,
-          endDate: objective.target_date,
+          endDate: objective.end_date,
           createdAt: objective.created_at
         }
       }
@@ -272,7 +272,7 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
 
   // 验证分类
   if (category) {
-    const validCategories = ['PERSONAL', 'WORK', 'HEALTH', 'LEARNING', 'FINANCE', 'OTHER']
+    const validCategories = ['PERSONAL', 'PROFESSIONAL', 'HEALTH', 'LEARNING', 'FINANCIAL', 'RELATIONSHIP', 'CREATIVE', 'OTHER']
     if (!validCategories.includes(category)) {
       throw createValidationError('无效的目标分类')
     }
@@ -309,7 +309,7 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
         target_date = COALESCE($6, target_date),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $7 AND user_id = $8
-      RETURNING id, title, description, category, status, progress, start_date, target_date, updated_at
+      RETURNING id, title, description, category, status, progress, start_date, end_date, updated_at
     `, [title, description, category, status, startDate, endDate, id, req.user.id])
 
     const updatedObjective = updateResult.rows[0]
@@ -331,7 +331,7 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
           status: updatedObjective.status,
           progress: parseFloat(updatedObjective.progress),
           startDate: updatedObjective.start_date,
-          endDate: updatedObjective.target_date,
+          endDate: updatedObjective.end_date,
           updatedAt: updatedObjective.updated_at
         }
       }

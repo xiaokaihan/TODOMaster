@@ -48,15 +48,15 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
   const whereClause = `WHERE ${whereConditions.join(' AND ')}`
 
   // 构建排序子句
-  const validSortFields = ['created_at', 'updated_at', 'due_date', 'progress', 'title', 'status']
+  const validSortFields = ['created_at', 'updated_at', 'progress', 'title', 'status']
   const sortField = validSortFields.includes(sortBy) ? sortBy : 'created_at'
   const sortDirection = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC'
 
   let orderByClause = ''
   if (sortField === 'progress') {
     orderByClause = `ORDER BY (CASE WHEN kr.target_value > 0 THEN LEAST(100, (kr.current_value / kr.target_value) * 100) ELSE 0 END) ${sortDirection}`
-  } else if (sortField === 'due_date') {
-    orderByClause = `ORDER BY kr.due_date ${sortDirection} NULLS LAST`
+  } else if (sortField === 'created_at') {
+    orderByClause = `ORDER BY kr.created_at ${sortDirection}`
   } else {
     orderByClause = `ORDER BY kr.${sortField} ${sortDirection}`
   }
@@ -75,7 +75,7 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
   const keyResultsQuery = `
     SELECT
       kr.id, kr.title, kr.description, kr.type, kr.target_value, kr.current_value,
-      kr.unit, kr.status, kr.due_date, kr.completed_at, kr.created_at, kr.updated_at,
+      kr.unit, kr.status, kr.created_at, kr.updated_at,
       kr.objective_id, o.title as objective_title,
       CASE
         WHEN kr.target_value > 0 THEN
@@ -104,8 +104,8 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
         unit: kr.unit,
         progress: parseFloat(kr.progress),
         status: kr.status,
-        dueDate: kr.due_date,
-        completedAt: kr.completed_at,
+        dueDate: null,
+        completedAt: null,
         objectiveId: kr.objective_id,
         objectiveTitle: kr.objective_title,
         createdAt: kr.created_at,
@@ -133,7 +133,7 @@ router.get('/:id', authenticate, asyncHandler(async (req: Request, res: Response
   const keyResultQuery = `
     SELECT
       kr.id, kr.title, kr.description, kr.type, kr.target_value, kr.current_value,
-      kr.unit, kr.status, kr.due_date, kr.completed_at, kr.created_at, kr.updated_at,
+      kr.unit, kr.status, kr.created_at, kr.updated_at,
       kr.objective_id, o.title as objective_title,
       CASE
         WHEN kr.target_value > 0 THEN
@@ -185,7 +185,7 @@ router.get('/:id', authenticate, asyncHandler(async (req: Request, res: Response
         unit: keyResult.unit,
         progress: parseFloat(keyResult.progress),
         status: keyResult.status,
-        dueDate: keyResult.due_date,
+        dueDate: null,
         completedAt: keyResult.completed_at,
         objectiveId: keyResult.objective_id,
         objectiveTitle: keyResult.objective_title,
@@ -203,7 +203,7 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
     throw createValidationError('用户信息不存在')
   }
 
-  const { title, description, objectiveId, type, targetValue, unit, dueDate } = req.body
+  const { title, description, objectiveId, type, targetValue, unit } = req.body
 
   // 验证必填字段
   if (!title || !objectiveId || !type || targetValue === undefined) {
@@ -238,10 +238,10 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
 
     // 创建关键结果
     const keyResultResult = await client.query(`
-      INSERT INTO key_results (objective_id, title, description, type, target_value, unit, due_date)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, title, description, type, target_value, current_value, unit, due_date, status, created_at
-    `, [objectiveId, title, description, type, targetValue, unit || null, dueDate || null])
+      INSERT INTO key_results (objective_id, title, description, type, target_value, unit)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, title, description, type, target_value, current_value, unit, status, created_at
+    `, [objectiveId, title, description, type, targetValue, unit || null])
 
     const keyResult = keyResultResult.rows[0]
 
@@ -262,7 +262,7 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
           targetValue: parseFloat(keyResult.target_value),
           currentValue: parseFloat(keyResult.current_value),
           unit: keyResult.unit,
-          dueDate: keyResult.due_date,
+          dueDate: null,
           status: keyResult.status,
           objectiveId: objectiveId,
           createdAt: keyResult.created_at
@@ -285,7 +285,7 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
   }
 
   const { id } = req.params
-  const { title, description, type, targetValue, currentValue, unit, dueDate, status } = req.body
+  const { title, description, type, targetValue, currentValue, unit, status } = req.body
 
   // 验证关键结果是否存在且属于当前用户
   const existingKeyResult = await pool.query(`
@@ -338,12 +338,11 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
         target_value = COALESCE($4, target_value),
         current_value = COALESCE($5, current_value),
         unit = COALESCE($6, unit),
-        due_date = COALESCE($7, due_date),
-        status = COALESCE($8, status),
+        status = COALESCE($7, status),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9
-      RETURNING id, title, description, type, target_value, current_value, unit, due_date, status, updated_at
-    `, [title, description, type, targetValue, currentValue, unit, dueDate, status, id])
+      WHERE id = $8
+      RETURNING id, title, description, type, target_value, current_value, unit, status, updated_at
+    `, [title, description, type, targetValue, currentValue, unit, status, id])
 
     const updatedKeyResult = updateResult.rows[0]
 
@@ -364,7 +363,7 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
           targetValue: parseFloat(updatedKeyResult.target_value),
           currentValue: parseFloat(updatedKeyResult.current_value),
           unit: updatedKeyResult.unit,
-          dueDate: updatedKeyResult.due_date,
+          dueDate: null,
           status: updatedKeyResult.status,
           updatedAt: updatedKeyResult.updated_at
         }

@@ -296,7 +296,7 @@ router.get('/productivity', authenticate, asyncHandler(async (req: Request, res:
     SELECT 
       COUNT(*) as completed_tasks_last_30_days,
       COALESCE(AVG(
-        EXTRACT(EPOCH FROM (completed_at - created_at)) / 3600
+        EXTRACT(EPOCH FROM (t.completed_at - t.created_at)) / 3600
       ), 0) as avg_completion_time_hours,
       COALESCE(AVG(actual_hours), 0) as avg_actual_hours
     FROM tasks t
@@ -400,7 +400,7 @@ router.get('/objectives/progress', authenticate, asyncHandler(async (req: Reques
       END as is_overdue,
       CASE 
         WHEN o.start_date IS NOT NULL AND o.end_date IS NOT NULL 
-        THEN EXTRACT(EPOCH FROM (CURRENT_DATE - o.start_date)) / EXTRACT(EPOCH FROM (o.end_date - o.start_date)) * 100
+        THEN EXTRACT(EPOCH FROM (CURRENT_DATE::timestamp - o.start_date::timestamp)) / NULLIF(EXTRACT(EPOCH FROM (o.end_date::timestamp - o.start_date::timestamp)), 0) * 100
         ELSE NULL 
       END as time_progress_percent
     FROM objectives o

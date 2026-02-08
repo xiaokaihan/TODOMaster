@@ -58,25 +58,101 @@ export interface TaskListResponse {
 
 // 任务服务类
 export class TaskService {
+  // 映射后端任务数据到前端格式
+  private static mapTaskFromBackend(backendTask: any): Task {
+    return {
+      id: backendTask.id,
+      title: backendTask.title,
+      description: backendTask.description,
+      priority: backendTask.priority as Priority,
+      status: backendTask.status as TaskStatus,
+      dueDate: backendTask.dueDate ? new Date(backendTask.dueDate) : undefined,
+      estimatedDuration: backendTask.estimatedHours ? backendTask.estimatedHours * 60 : undefined, // 转换为分钟
+      actualDuration: backendTask.actualHours ? backendTask.actualHours * 60 : undefined, // 转换为分钟
+      completedAt: backendTask.completedAt ? new Date(backendTask.completedAt) : undefined,
+      objectiveId: backendTask.objectiveId,
+      keyResultId: backendTask.keyResultId,
+      userId: backendTask.userId || '',
+      createdAt: new Date(backendTask.createdAt),
+      updatedAt: new Date(backendTask.updatedAt),
+      tags: backendTask.tags,
+      dependencies: backendTask.dependencies
+    }
+  }
+
   // 获取任务列表
   static async getTasks(params: TaskListParams = {}): Promise<any> {
     const queryString = buildQueryString(params)
-    return await get(`/tasks${queryString}`)
+    const response = await get<any>(`/tasks${queryString}`)
+    
+    // 映射任务数据
+    if (response && response.tasks) {
+      return {
+        ...response,
+        tasks: response.tasks.map((task: any) => TaskService.mapTaskFromBackend(task))
+      }
+    }
+    
+    return response
   }
 
   // 获取单个任务详情
   async getTask(id: string): Promise<Task> {
-    return await get<Task>(`/tasks/${id}`)
+    const response = await get<any>(`/tasks/${id}`)
+    return TaskService.mapTaskFromBackend(response.task || response)
   }
 
   // 创建新任务
   async createTask(data: CreateTaskData): Promise<Task> {
-    return await post<Task>('/tasks', data)
+    // 转换 estimatedDuration（分钟）为 estimatedHours（小时）
+    const requestData: any = {
+      title: data.title,
+      description: data.description,
+      priority: data.priority,
+      objectiveId: data.objectiveId,
+      keyResultId: data.keyResultId,
+      dueDate: data.dueDate ? new Date(data.dueDate).toISOString().split('T')[0] : undefined,
+      estimatedHours: data.estimatedDuration ? data.estimatedDuration / 60 : undefined,
+      dependencies: data.dependencies
+    }
+    
+    // 如果后端支持 tags，添加 tags
+    if (data.tags && data.tags.length > 0) {
+      requestData.tags = data.tags
+    }
+    
+    const response = await post<any>('/tasks', requestData)
+    return TaskService.mapTaskFromBackend(response.task || response)
   }
 
   // 更新任务
   async updateTask(id: string, data: UpdateTaskData): Promise<Task> {
-    return await put<Task>(`/tasks/${id}`, data)
+    // 转换 estimatedDuration 和 actualDuration（分钟）为小时
+    const requestData: any = {}
+    
+    if (data.title !== undefined) requestData.title = data.title
+    if (data.description !== undefined) requestData.description = data.description
+    if (data.status !== undefined) requestData.status = data.status
+    if (data.priority !== undefined) requestData.priority = data.priority
+    if (data.dueDate !== undefined) {
+      requestData.dueDate = new Date(data.dueDate).toISOString().split('T')[0]
+    }
+    if (data.keyResultId !== undefined) requestData.keyResultId = data.keyResultId
+    
+    if (data.estimatedDuration !== undefined) {
+      requestData.estimatedHours = data.estimatedDuration / 60
+    }
+    if (data.actualDuration !== undefined) {
+      requestData.actualHours = data.actualDuration / 60
+    }
+    
+    // 如果后端支持 tags，添加 tags
+    if (data.tags !== undefined) {
+      requestData.tags = data.tags
+    }
+    
+    const response = await put<any>(`/tasks/${id}`, requestData)
+    return TaskService.mapTaskFromBackend(response.task || response)
   }
 
   // 删除任务
@@ -96,7 +172,8 @@ export class TaskService {
 
   // 更新任务状态
   async updateTaskStatus(id: string, status: Task['status']): Promise<Task> {
-    return await put<Task>(`/tasks/${id}/status`, { status })
+    const response = await put<any>(`/tasks/${id}`, { status })
+    return TaskService.mapTaskFromBackend(response.task || response)
   }
 
   // 更新任务优先级

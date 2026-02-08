@@ -3,17 +3,20 @@
 // 数据库连接测试脚本
 const { Pool } = require('pg');
 
-// 使用用户提供的数据库配置
+// 加载环境变量
+require('dotenv').config();
+
+// 使用环境变量配置数据库连接
 const dbConfig = {
-  host: 'localhost',
-  port: 5432,
-  database: 'todomaster',
-  user: 'admin',
-  password: '123456',
-  ssl: false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'todomaster',
+  user: process.env.DB_USERNAME || 'todomaster',
+  password: process.env.DB_PASSWORD || '123456',
+  ssl: process.env.DB_SSL === 'true',
+  max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
+  idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
+  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '5000'),
 };
 
 const pool = new Pool(dbConfig);
@@ -66,7 +69,8 @@ async function testConnection() {
     } else {
       console.log('⚠️  数据库是空的，需要运行迁移脚本来创建表结构');
       console.log('💡 运行以下命令来初始化数据库:');
-      console.log('   psql -h localhost -U admin -d todomaster -f packages/backend/database/migrations/001_initial_schema.sql');
+      console.log(`   npm run db:migrate`);
+      console.log(`   或: psql -h ${dbConfig.host} -U ${dbConfig.user} -d ${dbConfig.database} -f database/migrations/001_initial_schema.sql`);
     }
 
     // 检查是否有迁移记录表
@@ -94,10 +98,11 @@ async function testConnection() {
     console.log('\n🔧 故障排除建议:');
     console.log('1. 确认 PostgreSQL 服务已启动');
     console.log('2. 确认数据库 "todomaster" 已创建');
-    console.log('3. 确认用户 "admin" 有访问权限');
+    console.log(`3. 确认用户 "${dbConfig.user}" 有访问权限`);
     console.log('4. 检查网络连接和防火墙设置');
+    console.log('5. 检查 .env 文件配置是否正确');
     console.log('\n📝 快速修复命令:');
-    console.log('psql -h localhost -U admin -c "CREATE DATABASE todomaster;"');
+    console.log(`psql -h ${dbConfig.host} -U ${dbConfig.user} -c "CREATE DATABASE todomaster;"`);
   } finally {
     await pool.end();
   }

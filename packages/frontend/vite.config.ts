@@ -1,16 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, '../shared/dist'),
-    },
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: '@shared/types', replacement: path.resolve(__dirname, '../shared/dist/types/index.js') },
+      { find: '@shared/utils', replacement: path.resolve(__dirname, '../shared/dist/utils/index.js') },
+      { find: '@shared', replacement: path.resolve(__dirname, '../shared/dist') },
+    ],
     extensions: ['.js', '.ts', '.tsx', '.jsx', '.json'],
+  },
+  optimizeDeps: {
+    include: ['@todomaster/shared'],
   },
   define: {
     // 确保环境变量在构建时被正确替换

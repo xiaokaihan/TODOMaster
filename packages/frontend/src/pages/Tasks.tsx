@@ -1,149 +1,126 @@
 import React, { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { Task, TaskStatus, Priority, Objective } from '@shared/types'
 import TaskCard from '../components/TaskCard'
-
-// 模拟任务数据
-const mockTasks: Task[] = [
-  {
-    id: '1',
-    title: '设计组件架构',
-    description: '设计可复用的组件架构，包括通用组件和业务组件的分层设计',
-    priority: Priority.HIGH,
-    status: TaskStatus.COMPLETED,
-    dueDate: new Date('2024-01-15'),
-    estimatedDuration: 480, // 8小时
-    actualDuration: 450, // 7.5小时
-    completedAt: new Date('2024-01-14'),
-    objectiveId: '1',
-    userId: 'user1',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-14'),
-    tags: ['设计', '架构', 'React'],
-  },
-  {
-    id: '2',
-    title: '实现核心组件',
-    description: '实现项目中最重要的业务组件，包括用户管理、数据展示等',
-    priority: Priority.HIGH,
-    status: TaskStatus.IN_PROGRESS,
-    dueDate: new Date('2024-02-01'),
-    estimatedDuration: 960, // 16小时
-    objectiveId: '1',
-    userId: 'user1',
-    createdAt: new Date('2024-01-10'),
-    updatedAt: new Date('2024-01-20'),
-    tags: ['开发', '组件', 'TypeScript'],
-    dependencies: ['1'],
-  },
-  {
-    id: '3',
-    title: '编写单元测试',
-    description: '为核心组件编写完整的单元测试，确保代码质量',
-    priority: Priority.MEDIUM,
-    status: TaskStatus.TODO,
-    dueDate: new Date('2024-02-15'),
-    estimatedDuration: 480, // 8小时
-    objectiveId: '1',
-    userId: 'user1',
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-01-15'),
-    tags: ['测试', 'Jest', '质量保证'],
-    dependencies: ['2'],
-  },
-  {
-    id: '4',
-    title: '制定运动计划',
-    description: '制定详细的每周运动计划，包括有氧运动和力量训练',
-    priority: Priority.MEDIUM,
-    status: TaskStatus.COMPLETED,
-    dueDate: new Date('2024-01-05'),
-    estimatedDuration: 120, // 2小时
-    actualDuration: 90, // 1.5小时
-    completedAt: new Date('2024-01-03'),
-    objectiveId: '2',
-    userId: 'user1',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-03'),
-    tags: ['健身', '计划'],
-  },
-  {
-    id: '5',
-    title: '坚持每日运动',
-    description: '按照制定的计划执行每日运动，记录运动数据',
-    priority: Priority.HIGH,
-    status: TaskStatus.IN_PROGRESS,
-    estimatedDuration: 60, // 每天1小时
-    objectiveId: '2',
-    userId: 'user1',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-20'),
-    tags: ['健身', '习惯'],
-    dependencies: ['4'],
-  },
-  {
-    id: '6',
-    title: '学习 TypeScript 泛型',
-    description: '深入学习 TypeScript 泛型的高级用法和最佳实践',
-    priority: Priority.MEDIUM,
-    status: TaskStatus.WAITING,
-    dueDate: new Date('2024-02-20'),
-    estimatedDuration: 360, // 6小时
-    objectiveId: '3',
-    userId: 'user1',
-    createdAt: new Date('2024-01-10'),
-    updatedAt: new Date('2024-01-10'),
-    tags: ['学习', 'TypeScript', '编程'],
-  },
-]
-
-// 模拟目标数据（用于显示目标信息）
-const mockObjectives: Objective[] = [
-  {
-    id: '1',
-    title: '完成 React 项目重构',
-    category: 'PROFESSIONAL' as any,
-    priority: Priority.HIGH,
-    status: 'ACTIVE' as any,
-    startDate: new Date('2024-01-01'),
-    userId: 'user1',
-    createdAt: new Date('2023-12-15'),
-    updatedAt: new Date('2024-01-15'),
-  },
-  {
-    id: '2',
-    title: '健身计划：减重 10kg',
-    category: 'HEALTH' as any,
-    priority: Priority.MEDIUM,
-    status: 'ACTIVE' as any,
-    startDate: new Date('2024-01-01'),
-    userId: 'user1',
-    createdAt: new Date('2023-12-20'),
-    updatedAt: new Date('2024-01-20'),
-  },
-  {
-    id: '3',
-    title: '学习 TypeScript 高级特性',
-    category: 'LEARNING' as any,
-    priority: Priority.MEDIUM,
-    status: 'DRAFT' as any,
-    startDate: new Date('2024-02-01'),
-    userId: 'user1',
-    createdAt: new Date('2024-01-10'),
-    updatedAt: new Date('2024-01-10'),
-  },
-]
+import { TaskService } from '../services/taskService'
+import { ObjectiveService } from '../services/objectiveService'
+import TaskForm from '../components/TaskForm'
+import { CreateTaskDto, UpdateTaskDto } from '@shared/types'
+import { showSuccess, handleApiError } from '../utils/notification'
 
 const Tasks: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks)
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState<{
     status?: TaskStatus
     priority?: Priority
     objectiveId?: string
     search?: string
   }>({})
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | undefined>()
 
-  // 过滤任务
-  const filteredTasks = tasks.filter(task => {
+  // 获取任务列表
+  const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useQuery(
+    ['tasks', filter],
+    () => TaskService.getTasks({
+      status: filter.status,
+      priority: filter.priority,
+      objectiveId: filter.objectiveId,
+      search: filter.search,
+    }),
+    { staleTime: 5 * 60 * 1000 }
+  )
+
+  // 获取目标列表（用于筛选）
+  const { data: objectivesData } = useQuery(
+    'objectives',
+    () => ObjectiveService.getObjectives({ limit: 100 }),
+    { staleTime: 10 * 60 * 1000 }
+  )
+
+  // 删除任务 mutation
+  const deleteTaskMutation = useMutation(
+    (id: string) => {
+      const taskService = new TaskService()
+      return taskService.deleteTask(id)
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('tasks')
+        showSuccess('任务删除成功', '任务已成功删除')
+      },
+      onError: (error: any) => {
+        handleApiError(error, '删除任务失败')
+      },
+    }
+  )
+
+  // 更新任务状态 mutation
+  const updateTaskStatusMutation = useMutation(
+    ({ id, status }: { id: string; status: TaskStatus }) => {
+      const taskService = new TaskService()
+      return taskService.updateTaskStatus(id, status)
+    },
+    {
+      onSuccess: (task) => {
+        queryClient.invalidateQueries('tasks')
+        const statusLabels: Record<TaskStatus, string> = {
+          [TaskStatus.TODO]: '待办',
+          [TaskStatus.IN_PROGRESS]: '进行中',
+          [TaskStatus.WAITING]: '等待中',
+          [TaskStatus.COMPLETED]: '已完成',
+          [TaskStatus.CANCELLED]: '已取消',
+        }
+        showSuccess('状态更新成功', `任务"${task.title}"已更新为${statusLabels[task.status]}`)
+      },
+      onError: (error: any) => {
+        handleApiError(error, '更新任务状态失败')
+      },
+    }
+  )
+
+  // 创建任务 mutation
+  const createTaskMutation = useMutation(
+    (data: CreateTaskDto) => {
+      const taskService = new TaskService()
+      return taskService.createTask(data)
+    },
+    {
+      onSuccess: (task) => {
+        queryClient.invalidateQueries('tasks')
+        setIsTaskFormOpen(false)
+        showSuccess('任务创建成功', `任务"${task.title}"已成功创建`)
+      },
+      onError: (error: any) => {
+        handleApiError(error, '创建任务失败')
+      },
+    }
+  )
+
+  // 更新任务 mutation
+  const updateTaskMutation = useMutation(
+    ({ id, data }: { id: string; data: UpdateTaskDto }) => {
+      const taskService = new TaskService()
+      return taskService.updateTask(id, data)
+    },
+    {
+      onSuccess: (task) => {
+        queryClient.invalidateQueries('tasks')
+        setIsTaskFormOpen(false)
+        setEditingTask(undefined)
+        showSuccess('任务更新成功', `任务"${task.title}"已成功更新`)
+      },
+      onError: (error: any) => {
+        handleApiError(error, '更新任务失败')
+      },
+    }
+  )
+
+  const tasks = tasksData?.tasks || []
+  const objectives = objectivesData?.data || []
+
+  // 过滤任务（前端过滤，因为后端可能不支持所有筛选）
+  const filteredTasks = tasks.filter((task: Task) => {
     if (filter.status && task.status !== filter.status) return false
     if (filter.priority && task.priority !== filter.priority) return false
     if (filter.objectiveId && task.objectiveId !== filter.objectiveId) return false
@@ -153,54 +130,104 @@ const Tasks: React.FC = () => {
 
   // 按状态分组任务
   const tasksByStatus = {
-    [TaskStatus.TODO]: filteredTasks.filter(task => task.status === TaskStatus.TODO),
-    [TaskStatus.IN_PROGRESS]: filteredTasks.filter(task => task.status === TaskStatus.IN_PROGRESS),
-    [TaskStatus.WAITING]: filteredTasks.filter(task => task.status === TaskStatus.WAITING),
-    [TaskStatus.COMPLETED]: filteredTasks.filter(task => task.status === TaskStatus.COMPLETED),
-    [TaskStatus.CANCELLED]: filteredTasks.filter(task => task.status === TaskStatus.CANCELLED),
+    [TaskStatus.TODO]: filteredTasks.filter((task: Task) => task.status === TaskStatus.TODO),
+    [TaskStatus.IN_PROGRESS]: filteredTasks.filter((task: Task) => task.status === TaskStatus.IN_PROGRESS),
+    [TaskStatus.WAITING]: filteredTasks.filter((task: Task) => task.status === TaskStatus.WAITING),
+    [TaskStatus.COMPLETED]: filteredTasks.filter((task: Task) => task.status === TaskStatus.COMPLETED),
+    [TaskStatus.CANCELLED]: filteredTasks.filter((task: Task) => task.status === TaskStatus.CANCELLED),
+  }
+
+  const handleCreateTask = () => {
+    setEditingTask(undefined)
+    setIsTaskFormOpen(true)
   }
 
   const handleEditTask = (task: Task) => {
-    console.log('编辑任务:', task)
-    // TODO: 实现编辑功能
+    setEditingTask(task)
+    setIsTaskFormOpen(true)
   }
 
-  const handleDeleteTask = (id: string) => {
-    if (confirm('确定要删除这个任务吗？')) {
-      setTasks(tasks.filter(task => task.id !== id))
+  const handleTaskSubmit = async (data: CreateTaskDto | UpdateTaskDto) => {
+    if (editingTask) {
+      await updateTaskMutation.mutateAsync({ id: editingTask.id, data: data as UpdateTaskDto })
+    } else {
+      await createTaskMutation.mutateAsync(data as CreateTaskDto)
     }
   }
 
-  const handleStartTask = (id: string) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, status: TaskStatus.IN_PROGRESS, updatedAt: new Date() } : task
-    ))
+  const handleDeleteTask = async (id: string) => {
+    if (confirm('确定要删除这个任务吗？')) {
+      try {
+        await deleteTaskMutation.mutateAsync(id)
+      } catch (error) {
+        // 错误已在 mutation 的 onError 中处理
+      }
+    }
   }
 
-  const handleCompleteTask = (id: string) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? {
-        ...task,
-        status: TaskStatus.COMPLETED,
-        completedAt: new Date(),
-        updatedAt: new Date()
-      } : task
-    ))
+  const handleStartTask = async (id: string) => {
+    try {
+      await updateTaskStatusMutation.mutateAsync({ id, status: TaskStatus.IN_PROGRESS })
+    } catch (error) {
+      // 错误已在 mutation 的 onError 中处理
+    }
   }
 
-  const handleStatusChange = (id: string, status: TaskStatus) => {
-    setTasks(tasks.map(task => 
-      task.id === id ? { ...task, status, updatedAt: new Date() } : task
-    ))
+  const handleCompleteTask = async (id: string) => {
+    try {
+      await updateTaskStatusMutation.mutateAsync({ id, status: TaskStatus.COMPLETED })
+    } catch (error) {
+      // 错误已在 mutation 的 onError 中处理
+    }
   }
 
+  const handleStatusChange = async (id: string, status: TaskStatus) => {
+    try {
+      await updateTaskStatusMutation.mutateAsync({ id, status })
+    } catch (error) {
+      // 错误已在 mutation 的 onError 中处理
+    }
+  }
 
+  // 加载状态
+  if (tasksLoading) {
+    return (
+      <div className="p-6">
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <span className="ml-4 text-gray-600">加载任务中...</span>
+        </div>
+      </div>
+    )
+  }
+
+  // 错误状态
+  if (tasksError) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-600 text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-red-900 mb-2">加载任务失败</h2>
+          <p className="text-red-700 mb-4">{(tasksError as Error).message || '未知错误'}</p>
+          <button
+            onClick={() => queryClient.invalidateQueries('tasks')}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+          >
+            重新加载
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">任务管理</h1>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+        <button 
+          onClick={handleCreateTask}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
           创建任务
         </button>
       </div>
@@ -247,7 +274,7 @@ const Tasks: React.FC = () => {
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">全部目标</option>
-              {mockObjectives.map(objective => (
+              {objectives.map((objective: Objective) => (
                 <option key={objective.id} value={objective.id}>
                   {objective.title}
                 </option>
@@ -278,11 +305,12 @@ const Tasks: React.FC = () => {
       </div>
 
       {/* 统计信息 */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-sm font-medium text-gray-500">总任务数</h3>
-          <p className="text-2xl font-bold text-gray-900">{tasks.length}</p>
-        </div>
+      {tasks.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4">
+            <h3 className="text-sm font-medium text-gray-500">总任务数</h3>
+            <p className="text-2xl font-bold text-gray-900">{tasks.length}</p>
+          </div>
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-sm font-medium text-gray-500">待办</h3>
           <p className="text-2xl font-bold text-gray-600">
@@ -304,13 +332,29 @@ const Tasks: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-sm font-medium text-gray-500">完成率</h3>
           <p className="text-2xl font-bold text-purple-600">
-            {Math.round((tasks.filter(task => task.status === TaskStatus.COMPLETED).length / tasks.length) * 100) || 0}%
+            {Math.round((tasks.filter((task: Task) => task.status === TaskStatus.COMPLETED).length / tasks.length) * 100) || 0}%
           </p>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* 空状态 */}
+      {tasks.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-4xl mb-2">📋</div>
+          <p className="text-gray-500 mb-4">暂无任务，开始创建您的第一个任务吧！</p>
+          <button 
+            onClick={handleCreateTask}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            创建任务
+          </button>
+        </div>
+      )}
 
       {/* 看板视图 */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {tasks.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* 待办列 */}
         <div className="bg-gray-50 rounded-lg p-4">
           <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
@@ -409,18 +453,20 @@ const Tasks: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* 任务详情信息 */}
-      <div className="mt-8 bg-white rounded-lg shadow p-6">
+      {tasks.length > 0 && (
+        <div className="mt-8 bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">任务分析</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <h4 className="font-medium text-gray-700 mb-2">按目标分组</h4>
             <div className="space-y-2">
-              {mockObjectives.map(objective => {
-                const objectiveTasks = tasks.filter(task => task.objectiveId === objective.id)
-                const completedCount = objectiveTasks.filter(task => task.status === TaskStatus.COMPLETED).length
+              {objectives.map((objective: Objective) => {
+                const objectiveTasks = tasks.filter((task: Task) => task.objectiveId === objective.id)
+                const completedCount = objectiveTasks.filter((task: Task) => task.status === TaskStatus.COMPLETED).length
                 const progress = objectiveTasks.length > 0 ? Math.round((completedCount / objectiveTasks.length) * 100) : 0
                 
                 return (
@@ -439,11 +485,11 @@ const Tasks: React.FC = () => {
           <div>
             <h4 className="font-medium text-gray-700 mb-2">逾期任务</h4>
             <div className="space-y-2">
-              {tasks.filter(task => 
+              {tasks.filter((task: Task) => 
                 task.dueDate && 
                 new Date(task.dueDate) < new Date() && 
                 task.status !== TaskStatus.COMPLETED
-              ).map(task => (
+              ).map((task: Task) => (
                 <div key={task.id} className="p-2 bg-red-50 rounded">
                   <span className="text-sm text-red-700">{task.title}</span>
                   <div className="text-xs text-red-500">
@@ -464,11 +510,11 @@ const Tasks: React.FC = () => {
           <div>
             <h4 className="font-medium text-gray-700 mb-2">即将到期</h4>
             <div className="space-y-2">
-              {tasks.filter(task => {
+              {tasks.filter((task: Task) => {
                 if (!task.dueDate || task.status === TaskStatus.COMPLETED) return false
                 const daysLeft = Math.ceil((new Date(task.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                 return daysLeft > 0 && daysLeft <= 7
-              }).map(task => (
+              }).map((task: Task) => (
                 <div key={task.id} className="p-2 bg-yellow-50 rounded">
                   <span className="text-sm text-yellow-700">{task.title}</span>
                   <div className="text-xs text-yellow-600">
@@ -486,7 +532,21 @@ const Tasks: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* 任务表单对话框 */}
+      <TaskForm
+        task={editingTask}
+        isOpen={isTaskFormOpen}
+        onClose={() => {
+          setIsTaskFormOpen(false)
+          setEditingTask(undefined)
+        }}
+        onSubmit={handleTaskSubmit}
+        isLoading={createTaskMutation.isLoading || updateTaskMutation.isLoading}
+        objectives={objectives}
+      />
     </div>
   )
 }
