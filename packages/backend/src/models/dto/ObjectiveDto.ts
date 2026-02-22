@@ -1,10 +1,10 @@
-import { ObjectiveCategory, ObjectiveStatus } from '../entities/Objective'
+import { ObjectiveStatus } from '../entities/Objective'
 
 // 创建目标的数据传输对象
 export interface CreateObjectiveDto {
   title: string
   description?: string
-  category: ObjectiveCategory
+  systemId: string
   startDate?: string
   endDate?: string
 }
@@ -13,7 +13,7 @@ export interface CreateObjectiveDto {
 export interface UpdateObjectiveDto {
   title?: string
   description?: string
-  category?: ObjectiveCategory
+  systemId?: string
   status?: ObjectiveStatus
   startDate?: string
   endDate?: string
@@ -24,7 +24,7 @@ export interface ObjectiveListQuery {
   page: number
   limit: number
   search: string
-  category: string
+  systemId: string
   status: string
 }
 
@@ -33,7 +33,9 @@ export interface ObjectiveResponse {
   id: string
   title: string
   description?: string
-  category: ObjectiveCategory
+  systemId: string
+  systemName?: string
+  systemIcon?: string
   status: ObjectiveStatus
   progress: number
   startDate?: string
@@ -103,4 +105,4 @@ export interface ApiResponse<T> {
   message?: string
   data: T
   error?: string
-} 
+}

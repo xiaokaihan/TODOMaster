@@ -152,11 +152,13 @@ export class TasksController extends BaseController {
       SELECT 
         t.*,
         o.title as objective_title,
-        o.category as objective_category,
+        o.system_id as objective_system_id,
+        s.name as system_name,
         kr.title as key_result_title,
         kr.type as key_result_type
       FROM tasks t
       JOIN objectives o ON t.objective_id = o.id
+      LEFT JOIN systems s ON o.system_id = s.id
       LEFT JOIN key_results kr ON t.key_result_id = kr.id
       WHERE t.id = $1 AND o.user_id = $2
     `
@@ -216,7 +218,8 @@ export class TasksController extends BaseController {
       objective: {
         id: task.objective_id,
         title: task.objective_title,
-        category: task.objective_category
+        systemId: task.objective_system_id,
+        systemName: task.system_name
       },
       keyResult: task.key_result_id ? {
         id: task.key_result_id,

@@ -2,7 +2,6 @@
 export { User, UserRole, UserPreferences, UserStats, UserDetail } from './entities/User'
 export { 
   Objective, 
-  ObjectiveCategory, 
   ObjectiveStatus, 
   ObjectiveDetail,
   KeyResult as ObjectiveKeyResult,

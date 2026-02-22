@@ -10,12 +10,40 @@ export interface User {
   updatedAt: Date;
 }
 
+// 系统相关类型
+export enum SystemStatus {
+  ACTIVE = 'ACTIVE',       // 活跃
+  PAUSED = 'PAUSED',       // 暂停
+  ARCHIVED = 'ARCHIVED'    // 归档
+}
+
+export interface System {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  status: SystemStatus;
+  sortOrder: number;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  // 聚合字段（由后端计算）
+  objectiveCount?: number;
+  activeObjectiveCount?: number;
+  completedObjectiveCount?: number;
+  overallProgress?: number;
+}
+
 // 目标相关类型
 export interface Objective {
   id: string;
   title: string;
   description?: string;
-  category: ObjectiveCategory;
+  systemId: string;
+  systemName?: string;
+  systemIcon?: string;
+  systemColor?: string;
   priority: Priority;
   status: ObjectiveStatus;
   startDate?: Date;
@@ -68,17 +96,6 @@ export interface Task {
 }
 
 // 枚举类型
-export enum ObjectiveCategory {
-  PERSONAL = 'PERSONAL',        // 个人发展
-  PROFESSIONAL = 'PROFESSIONAL', // 职业发展
-  HEALTH = 'HEALTH',           // 健康生活
-  LEARNING = 'LEARNING',       // 学习成长
-  FINANCIAL = 'FINANCIAL',     // 财务规划
-  RELATIONSHIP = 'RELATIONSHIP', // 人际关系
-  CREATIVE = 'CREATIVE',       // 创意项目
-  OTHER = 'OTHER'              // 其他
-}
-
 export enum Priority {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
@@ -141,10 +158,29 @@ export interface PaginatedResponse<T> {
 }
 
 // 创建和更新的数据传输对象
+
+// System DTOs
+export interface CreateSystemDto {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface UpdateSystemDto {
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  status?: SystemStatus;
+  sortOrder?: number;
+}
+
+// Objective DTOs
 export interface CreateObjectiveDto {
   title: string;
   description?: string;
-  category: ObjectiveCategory;
+  systemId: string;
   priority: Priority;
   startDate: Date;
   targetDate?: Date;
@@ -153,7 +189,7 @@ export interface CreateObjectiveDto {
 export interface UpdateObjectiveDto {
   title?: string;
   description?: string;
-  category?: ObjectiveCategory;
+  systemId?: string;
   priority?: Priority;
   startDate?: Date;
   targetDate?: Date;

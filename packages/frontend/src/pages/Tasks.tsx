@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { Task, TaskStatus, Priority, Objective } from '@shared/types'
+import { Task, TaskStatus, Priority, Objective, System } from '@shared/types'
 import TaskCard from '../components/TaskCard'
 import { TaskService } from '../services/taskService'
 import { ObjectiveService } from '../services/objectiveService'
+import { SystemService } from '../services/systemService'
 import TaskForm from '../components/TaskForm'
 import { CreateTaskDto, UpdateTaskDto } from '@shared/types'
 import { showSuccess, handleApiError } from '../utils/notification'
@@ -14,10 +15,18 @@ const Tasks: React.FC = () => {
     status?: TaskStatus
     priority?: Priority
     objectiveId?: string
+    systemId?: string
     search?: string
   }>({})
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | undefined>()
+
+  // 获取系统列表（用于筛选）
+  const { data: systemsData } = useQuery(
+    'systems',
+    () => SystemService.getSystems(),
+    { staleTime: 10 * 60 * 1000 }
+  )
 
   // 获取任务列表
   const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useQuery(
@@ -26,15 +35,16 @@ const Tasks: React.FC = () => {
       status: filter.status,
       priority: filter.priority,
       objectiveId: filter.objectiveId,
+      systemId: filter.systemId,
       search: filter.search,
     }),
     { staleTime: 5 * 60 * 1000 }
   )
 
-  // 获取目标列表（用于筛选）
+  // 获取目标列表（用于筛选，根据系统过滤）
   const { data: objectivesData } = useQuery(
-    'objectives',
-    () => ObjectiveService.getObjectives({ limit: 100 }),
+    ['objectives', filter.systemId],
+    () => ObjectiveService.getObjectives({ limit: 100, systemId: filter.systemId }),
     { staleTime: 10 * 60 * 1000 }
   )
 
@@ -116,17 +126,12 @@ const Tasks: React.FC = () => {
     }
   )
 
-  const tasks = tasksData?.tasks || []
+  const tasks: Task[] = tasksData?.tasks || []
   const objectives = objectivesData?.data || []
+  const systems = systemsData || []
 
-  // 过滤任务（前端过滤，因为后端可能不支持所有筛选）
-  const filteredTasks = tasks.filter((task: Task) => {
-    if (filter.status && task.status !== filter.status) return false
-    if (filter.priority && task.priority !== filter.priority) return false
-    if (filter.objectiveId && task.objectiveId !== filter.objectiveId) return false
-    if (filter.search && !task.title.toLowerCase().includes(filter.search.toLowerCase())) return false
-    return true
-  })
+  // 由于后端已支持所有筛选，直接使用返回的任务
+  const filteredTasks = tasks
 
   // 按状态分组任务
   const tasksByStatus = {
@@ -234,7 +239,39 @@ const Tasks: React.FC = () => {
 
       {/* 过滤器 */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">所属系统</label>
+            <select
+              value={filter.systemId || ''}
+              onChange={(e) => setFilter({ ...filter, systemId: e.target.value || undefined, objectiveId: undefined })}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">全部系统</option>
+              {systems.map((system: System) => (
+                <option key={system.id} value={system.id}>
+                  {system.icon || '📋'} {system.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">关联目标</label>
+            <select
+              value={filter.objectiveId || ''}
+              onChange={(e) => setFilter({ ...filter, objectiveId: e.target.value || undefined })}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">全部目标</option>
+              {objectives.map((objective: Objective) => (
+                <option key={objective.id} value={objective.id}>
+                  {objective.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
             <select
@@ -263,22 +300,6 @@ const Tasks: React.FC = () => {
               <option value={Priority.MEDIUM}>中</option>
               <option value={Priority.HIGH}>高</option>
               <option value={Priority.CRITICAL}>紧急</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">关联目标</label>
-            <select
-              value={filter.objectiveId || ''}
-              onChange={(e) => setFilter({ ...filter, objectiveId: e.target.value || undefined })}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">全部目标</option>
-              {objectives.map((objective: Objective) => (
-                <option key={objective.id} value={objective.id}>
-                  {objective.title}
-                </option>
-              ))}
             </select>
           </div>
 

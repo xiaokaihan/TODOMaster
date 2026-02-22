@@ -1,4 +1,4 @@
-import { Task, CreateTaskDto, UpdateTaskDto, TaskStatus, Priority as TaskPriority } from '@shared/types'
+import { Task, CreateTaskDto, UpdateTaskDto, TaskStatus, Priority, Priority as TaskPriority } from '@shared/types'
 import { get, post, put, del, buildQueryString } from './api'
 
 // 任务查询参数
@@ -7,6 +7,7 @@ export interface TaskListParams {
   limit?: number
   objectiveId?: string
   keyResultId?: string
+  systemId?: string
   status?: TaskStatus
   priority?: TaskPriority
   search?: string
@@ -112,8 +113,7 @@ export class TaskService {
       objectiveId: data.objectiveId,
       keyResultId: data.keyResultId,
       dueDate: data.dueDate ? new Date(data.dueDate).toISOString().split('T')[0] : undefined,
-      estimatedHours: data.estimatedDuration ? data.estimatedDuration / 60 : undefined,
-      dependencies: data.dependencies
+      estimatedHours: data.estimatedDuration ? data.estimatedDuration / 60 : undefined
     }
     
     // 如果后端支持 tags，添加 tags

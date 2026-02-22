@@ -79,21 +79,25 @@ router.get('/objectives/categories', authenticate, asyncHandler(async (req: Requ
 
   const categoryStatsQuery = `
     SELECT 
-      category,
+      s.id, s.name, s.icon, s.color,
       COUNT(*) as total,
-      COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed,
-      COUNT(CASE WHEN status = 'IN_PROGRESS' THEN 1 END) as in_progress,
-      COALESCE(AVG(progress), 0) as avg_progress
-    FROM objectives 
-    WHERE user_id = $1
-    GROUP BY category
+      COUNT(CASE WHEN o.status = 'COMPLETED' THEN 1 END) as completed,
+      COUNT(CASE WHEN o.status = 'IN_PROGRESS' THEN 1 END) as in_progress,
+      COALESCE(AVG(o.progress), 0) as avg_progress
+    FROM objectives o
+    LEFT JOIN systems s ON o.system_id = s.id
+    WHERE o.user_id = $1
+    GROUP BY s.id, s.name, s.icon, s.color
     ORDER BY total DESC
   `
 
   const result = await pool.query(categoryStatsQuery, [req.user.id])
 
   const categories = result.rows.map(row => ({
-    category: row.category,
+    systemId: row.id,
+    systemName: row.name,
+    systemIcon: row.icon,
+    systemColor: row.color,
     total: parseInt(row.total),
     completed: parseInt(row.completed),
     inProgress: parseInt(row.in_progress),
@@ -360,21 +364,21 @@ router.get('/objectives/progress', authenticate, asyncHandler(async (req: Reques
   }
 
   const status = req.query.status as string || ''
-  const category = req.query.category as string || ''
+  const systemId = req.query.systemId as string || ''
 
-  let whereConditions = ['user_id = $1']
+  let whereConditions = ['o.user_id = $1']
   let queryParams: any[] = [req.user.id]
   let paramIndex = 2
 
   if (status) {
-    whereConditions.push(`status = $${paramIndex}`)
+    whereConditions.push(`o.status = $${paramIndex}`)
     queryParams.push(status)
     paramIndex++
   }
 
-  if (category) {
-    whereConditions.push(`category = $${paramIndex}`)
-    queryParams.push(category)
+  if (systemId) {
+    whereConditions.push(`o.system_id = $${paramIndex}`)
+    queryParams.push(systemId)
     paramIndex++
   }
 
@@ -384,7 +388,9 @@ router.get('/objectives/progress', authenticate, asyncHandler(async (req: Reques
     SELECT 
       o.id,
       o.title,
-      o.category,
+      o.system_id,
+      s.name as system_name,
+      s.icon as system_icon,
       o.status,
       o.progress,
       o.start_date,
@@ -404,6 +410,7 @@ router.get('/objectives/progress', authenticate, asyncHandler(async (req: Reques
         ELSE NULL 
       END as time_progress_percent
     FROM objectives o
+    LEFT JOIN systems s ON o.system_id = s.id
     ${whereClause}
     ORDER BY o.progress ASC, o.created_at DESC
   `
@@ -413,7 +420,9 @@ router.get('/objectives/progress', authenticate, asyncHandler(async (req: Reques
   const objectives = result.rows.map(row => ({
     id: row.id,
     title: row.title,
-    category: row.category,
+    systemId: row.system_id,
+    systemName: row.system_name,
+    systemIcon: row.system_icon,
     status: row.status,
     progress: parseFloat(row.progress),
     startDate: row.start_date,

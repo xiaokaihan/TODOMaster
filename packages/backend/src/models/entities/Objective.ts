@@ -3,7 +3,9 @@ export interface Objective {
   id: string
   title: string
   description?: string
-  category: ObjectiveCategory
+  systemId: string
+  systemName?: string
+  systemIcon?: string
   status: ObjectiveStatus
   progress: number
   startDate?: string | null
@@ -13,22 +15,12 @@ export interface Objective {
   updatedAt: string
 }
 
-// 目标分类枚举
-export enum ObjectiveCategory {
-  WORK = 'WORK',
-  PERSONAL = 'PERSONAL', 
-  HEALTH = 'HEALTH',
-  LEARNING = 'LEARNING',
-  FINANCE = 'FINANCE',
-  OTHER = 'OTHER'
-}
-
 // 目标状态枚举
 export enum ObjectiveStatus {
-  NOT_STARTED = 'NOT_STARTED',
-  IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
+  DRAFT = 'DRAFT',
+  ACTIVE = 'ACTIVE',
   ON_HOLD = 'ON_HOLD',
+  COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED'
 }
 
@@ -67,4 +59,4 @@ export interface Task {
   objectiveId: string
   createdAt: Date | string
   updatedAt: Date | string
-} 
+}

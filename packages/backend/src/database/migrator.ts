@@ -181,6 +181,7 @@ export const dropAllTables = async (): Promise<void> => {
       DROP TABLE IF EXISTS tasks CASCADE;
       DROP TABLE IF EXISTS key_results CASCADE;
       DROP TABLE IF EXISTS objectives CASCADE;
+      DROP TABLE IF EXISTS systems CASCADE;
       DROP TABLE IF EXISTS users CASCADE;
       DROP TABLE IF EXISTS schema_migrations CASCADE;
     `
@@ -195,6 +196,7 @@ export const dropAllTables = async (): Promise<void> => {
       DROP TYPE IF EXISTS task_status CASCADE;
       DROP TYPE IF EXISTS objective_status CASCADE;
       DROP TYPE IF EXISTS objective_category CASCADE;
+      DROP TYPE IF EXISTS system_status CASCADE;
       DROP TYPE IF EXISTS user_role CASCADE;
     `
     

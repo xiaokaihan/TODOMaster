@@ -19,6 +19,7 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
   const priority = req.query.priority as string || ''
   const keyResultId = req.query.keyResultId as string
   const objectiveId = req.query.objectiveId as string
+  const systemId = req.query.systemId as string
 
   const offset = (page - 1) * limit
 
@@ -57,6 +58,12 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
     paramIndex++
   }
 
+  if (systemId) {
+    whereConditions.push(`o.system_id = $${paramIndex}`)
+    queryParams.push(systemId)
+    paramIndex++
+  }
+
   const whereClause = `WHERE ${whereConditions.join(' AND ')}`
 
   // 获取总数
@@ -69,17 +76,19 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
   const countResult = await pool.query(countQuery, queryParams)
   const total = parseInt(countResult.rows[0].count)
 
-  // 获取任务列表
+  // 获取任务列表（含系统信息）
   const tasksQuery = `
     SELECT 
       t.id, t.title, t.description, t.status, t.priority, 
       t.estimated_hours, t.actual_hours, t.due_date, t.completed_at, 
       t.created_at, t.updated_at,
       t.key_result_id, kr.title as key_result_title,
-      t.objective_id, o.title as objective_title
+      t.objective_id, o.title as objective_title,
+      s.id as system_id, s.name as system_name, s.icon as system_icon, s.color as system_color
     FROM tasks t
     LEFT JOIN key_results kr ON t.key_result_id = kr.id
     JOIN objectives o ON t.objective_id = o.id
+    LEFT JOIN systems s ON o.system_id = s.id
     ${whereClause}
     ORDER BY t.created_at DESC
     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -105,7 +114,11 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
         keyResultId: task.key_result_id,
         keyResultTitle: task.key_result_title,
         objectiveId: task.objective_id,
-        objectiveTitle: task.objective_title
+        objectiveTitle: task.objective_title,
+        systemId: task.system_id,
+        systemName: task.system_name,
+        systemIcon: task.system_icon,
+        systemColor: task.system_color
       })),
       pagination: {
         page,

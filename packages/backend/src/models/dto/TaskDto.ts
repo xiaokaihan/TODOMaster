@@ -68,7 +68,8 @@ export interface TaskDetailResponse extends TaskResponse {
   objective: {
     id: string
     title: string
-    category: string
+    systemId: string
+    systemName?: string
   }
   keyResult?: {
     id: string

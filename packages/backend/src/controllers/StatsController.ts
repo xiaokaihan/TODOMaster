@@ -87,20 +87,24 @@ export class StatsController extends BaseController {
 
     const categoryStatsQuery = `
       SELECT 
-        category,
+        s.id as system_id, s.name as system_name, s.icon as system_icon, s.color as system_color,
         COUNT(*) as total_objectives,
-        COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_objectives,
-        AVG(progress) as avg_progress
-      FROM objectives 
-      WHERE user_id = $1
-      GROUP BY category
+        COUNT(CASE WHEN o.status = 'COMPLETED' THEN 1 END) as completed_objectives,
+        AVG(o.progress) as avg_progress
+      FROM objectives o
+      LEFT JOIN systems s ON o.system_id = s.id
+      WHERE o.user_id = $1
+      GROUP BY s.id, s.name, s.icon, s.color
       ORDER BY total_objectives DESC
     `
 
     const categoryStatsResult = await pool.query(categoryStatsQuery, [userId])
 
     const categoryStats = categoryStatsResult.rows.map(row => ({
-      category: row.category,
+      systemId: row.system_id,
+      systemName: row.system_name,
+      systemIcon: row.system_icon,
+      systemColor: row.system_color,
       totalObjectives: parseInt(row.total_objectives),
       completedObjectives: parseInt(row.completed_objectives),
       completionRate: row.total_objectives > 0 
@@ -216,10 +220,11 @@ export class StatsController extends BaseController {
     // 获取最近更新的目标
     const recentObjectivesQuery = `
       SELECT 
-        id, title, category, status, progress, updated_at
-      FROM objectives 
-      WHERE user_id = $1
-      ORDER BY updated_at DESC
+        o.id, o.title, o.system_id, s.name as system_name, o.status, o.progress, o.updated_at
+      FROM objectives o
+      LEFT JOIN systems s ON o.system_id = s.id
+      WHERE o.user_id = $1
+      ORDER BY o.updated_at DESC
       LIMIT 5
     `
 
@@ -262,7 +267,8 @@ export class StatsController extends BaseController {
       recentObjectives: recentObjectivesResult.rows.map(obj => ({
         id: obj.id,
         title: obj.title,
-        category: obj.category,
+        systemId: obj.system_id,
+        systemName: obj.system_name,
         status: obj.status,
         progress: parseFloat(obj.progress),
         updatedAt: obj.updated_at

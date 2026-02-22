@@ -133,10 +133,12 @@ export class KeyResultsController extends BaseController {
       SELECT 
         kr.*,
         o.title as objective_title,
-        o.category as objective_category,
+        o.system_id as objective_system_id,
+        s.name as system_name,
         o.status as objective_status
       FROM key_results kr
       JOIN objectives o ON kr.objective_id = o.id
+      LEFT JOIN systems s ON o.system_id = s.id
       WHERE kr.id = $1 AND o.user_id = $2
     `
 
@@ -176,7 +178,8 @@ export class KeyResultsController extends BaseController {
       objective: {
         id: keyResult.objective_id,
         title: keyResult.objective_title,
-        category: keyResult.objective_category,
+        systemId: keyResult.objective_system_id,
+        systemName: keyResult.system_name,
         status: keyResult.objective_status
       },
       tasks: tasksResult.rows.map(task => ({

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Objective, ObjectiveCategory, Priority, ObjectiveStatus, CreateObjectiveDto, UpdateObjectiveDto } from '@shared/types'
+import { Objective, Priority, ObjectiveStatus, CreateObjectiveDto, UpdateObjectiveDto, System } from '@shared/types'
+import { SystemService } from '../services/systemService'
 
 interface ObjectiveFormProps {
   objective?: Objective
@@ -7,6 +8,7 @@ interface ObjectiveFormProps {
   onClose: () => void
   onSubmit: (data: CreateObjectiveDto | UpdateObjectiveDto) => void
   isLoading?: boolean
+  defaultSystemId?: string
 }
 
 const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
@@ -14,12 +16,14 @@ const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  isLoading = false
+  isLoading = false,
+  defaultSystemId
 }) => {
+  const [systems, setSystems] = useState<System[]>([])
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: ObjectiveCategory.PERSONAL,
+    systemId: '',
     priority: Priority.MEDIUM,
     startDate: '',
     targetDate: '',
@@ -28,12 +32,19 @@ const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // 加载系统列表
+  useEffect(() => {
+    if (isOpen) {
+      SystemService.getSystems({ status: 'ACTIVE' as any }).then(setSystems).catch(console.error)
+    }
+  }, [isOpen])
+
   useEffect(() => {
     if (objective) {
       setFormData({
         title: objective.title,
         description: objective.description || '',
-        category: objective.category,
+        systemId: objective.systemId || '',
         priority: objective.priority,
         startDate: objective.startDate ? new Date(objective.startDate).toISOString().split('T')[0] : '',
         targetDate: objective.targetDate ? new Date(objective.targetDate).toISOString().split('T')[0] : '',
@@ -43,7 +54,7 @@ const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
       setFormData({
         title: '',
         description: '',
-        category: ObjectiveCategory.PERSONAL,
+        systemId: defaultSystemId || '',
         priority: Priority.MEDIUM,
         startDate: new Date().toISOString().split('T')[0],
         targetDate: '',
@@ -51,7 +62,7 @@ const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
       })
     }
     setErrors({})
-  }, [objective, isOpen])
+  }, [objective, isOpen, defaultSystemId])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -60,6 +71,10 @@ const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
       newErrors.title = '目标标题不能为空'
     } else if (formData.title.length > 100) {
       newErrors.title = '目标标题不能超过100个字符'
+    }
+
+    if (!formData.systemId) {
+      newErrors.systemId = '请选择所属系统'
     }
 
     if (formData.description && formData.description.length > 500) {
@@ -88,7 +103,7 @@ const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
     const submitData = {
       title: formData.title.trim(),
       description: formData.description.trim() || undefined,
-      category: formData.category,
+      systemId: formData.systemId,
       priority: formData.priority,
       startDate: new Date(formData.startDate),
       targetDate: formData.targetDate ? new Date(formData.targetDate) : undefined,
@@ -166,27 +181,30 @@ const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
             )}
           </div>
 
-          {/* 分类和优先级 */}
+          {/* 所属系统和优先级 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                目标分类 <span className="text-red-500">*</span>
+                所属系统 <span className="text-red-500">*</span>
               </label>
               <select
-                value={formData.category}
-                onChange={(e) => handleInputChange('category', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                value={formData.systemId}
+                onChange={(e) => handleInputChange('systemId', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.systemId ? 'border-red-300' : 'border-gray-300'
+                }`}
                 disabled={isLoading}
               >
-                <option value={ObjectiveCategory.PERSONAL}>👤 个人发展</option>
-                <option value={ObjectiveCategory.PROFESSIONAL}>💼 职业发展</option>
-                <option value={ObjectiveCategory.HEALTH}>💪 健康生活</option>
-                <option value={ObjectiveCategory.LEARNING}>📚 学习成长</option>
-                <option value={ObjectiveCategory.FINANCIAL}>💰 财务规划</option>
-                <option value={ObjectiveCategory.RELATIONSHIP}>❤️ 人际关系</option>
-                <option value={ObjectiveCategory.CREATIVE}>🎨 创意项目</option>
-                <option value={ObjectiveCategory.OTHER}>📋 其他</option>
+                <option value="">请选择系统...</option>
+                {systems.map(system => (
+                  <option key={system.id} value={system.id}>
+                    {system.icon} {system.name}
+                  </option>
+                ))}
               </select>
+              {errors.systemId && (
+                <p className="mt-1 text-sm text-red-600">{errors.systemId}</p>
+              )}
             </div>
 
             <div>
@@ -291,4 +309,4 @@ const ObjectiveForm: React.FC<ObjectiveFormProps> = ({
   )
 }
 
-export default ObjectiveForm 
+export default ObjectiveForm

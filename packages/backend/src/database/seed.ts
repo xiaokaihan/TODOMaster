@@ -23,25 +23,48 @@ const seedData = {
       role: 'user'
     }
   ],
+  systems: [
+    {
+      name: '学习成长',
+      description: '持续学习新知识和技能',
+      icon: '📚',
+      color: '#D97706',
+      sort_order: 0
+    },
+    {
+      name: '健康生活',
+      description: '保持健康的生活方式',
+      icon: '💪',
+      color: '#16A34A',
+      sort_order: 1
+    },
+    {
+      name: '职业发展',
+      description: '推动职业成长和项目交付',
+      icon: '💼',
+      color: '#2563EB',
+      sort_order: 2
+    }
+  ],
   objectives: [
     {
       title: '提升个人技能',
       description: '通过学习新技术和参与项目来提升个人技能水平',
-      category: 'LEARNING',
+      systemIndex: 0,
       start_date: '2024-01-01',
       end_date: '2024-12-31'
     },
     {
       title: '健康生活方式',
       description: '建立健康的生活习惯，包括运动、饮食和睡眠',
-      category: 'HEALTH',
+      systemIndex: 1,
       start_date: '2024-01-01',
       end_date: '2024-06-30'
     },
     {
       title: '工作项目完成',
       description: '按时完成Q1季度的重要工作项目',
-      category: 'WORK',
+      systemIndex: 2,
       start_date: '2024-01-01',
       end_date: '2024-03-31'
     }
@@ -186,8 +209,36 @@ const seedUsers = async (): Promise<string[]> => {
   }
 }
 
+// 插入系统数据
+const seedSystems = async (userId: string): Promise<string[]> => {
+  const client = await pool.connect()
+  const systemIds: string[] = []
+
+  try {
+    console.log('🏗️ 插入系统数据...')
+
+    for (const system of seedData.systems) {
+      const result = await client.query(`
+        INSERT INTO systems (user_id, name, description, icon, color, sort_order)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
+      `, [userId, system.name, system.description, system.icon, system.color, system.sort_order])
+
+      systemIds.push(result.rows[0].id)
+      console.log(`  ✅ 系统: ${system.name}`)
+    }
+
+    return systemIds
+  } catch (error) {
+    console.error('❌ 系统数据插入失败:', error)
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
 // 插入目标数据
-const seedObjectives = async (userId: string): Promise<string[]> => {
+const seedObjectives = async (userId: string, systemIds: string[]): Promise<string[]> => {
   const client = await pool.connect()
   const objectiveIds: string[] = []
   
@@ -195,11 +246,12 @@ const seedObjectives = async (userId: string): Promise<string[]> => {
     console.log('🎯 插入目标数据...')
     
     for (const objective of seedData.objectives) {
+      const systemId = systemIds[objective.systemIndex]
       const result = await client.query(`
-        INSERT INTO objectives (user_id, title, description, category, start_date, end_date)
+        INSERT INTO objectives (user_id, title, description, system_id, start_date, end_date)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id
-      `, [userId, objective.title, objective.description, objective.category, objective.start_date, objective.end_date])
+      `, [userId, objective.title, objective.description, systemId, objective.start_date, objective.end_date])
       
       objectiveIds.push(result.rows[0].id)
       console.log(`  ✅ 目标: ${objective.title}`)
@@ -331,8 +383,9 @@ export const runSeed = async (): Promise<void> => {
     const userIds = await seedUsers()
     const demoUserId = userIds[1] // demo用户
     
-    // 为demo用户插入示例数据
-    const objectiveIds = await seedObjectives(demoUserId)
+    // 为demo用户插入系统和示例数据
+    const systemIds = await seedSystems(demoUserId)
+    const objectiveIds = await seedObjectives(demoUserId, systemIds)
     const keyResultIds = await seedKeyResults(objectiveIds)
     const taskIds = await seedTasks(objectiveIds, keyResultIds)
     await seedTags(demoUserId, taskIds)

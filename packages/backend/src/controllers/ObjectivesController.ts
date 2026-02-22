@@ -22,7 +22,7 @@ export class ObjectivesController extends BaseController {
       page: parseInt(req.query.page as string) || 1,
       limit: parseInt(req.query.limit as string) || 20,
       search: req.query.search as string || '',
-      category: req.query.category as string || '',
+      systemId: req.query.systemId as string || '',
       status: req.query.status as string || ''
     }
 
@@ -33,27 +33,27 @@ export class ObjectivesController extends BaseController {
     const offset = (page - 1) * limit
 
     // 构建查询条件
-    let baseConditions = ['user_id = $1']
+    let baseConditions = ['o.user_id = $1']
     let queryParams: any[] = [userId]
     let paramIndex = 2
 
     // 搜索条件
     if (query.search) {
-      baseConditions.push(`(title ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`)
+      baseConditions.push(`(o.title ILIKE $${paramIndex} OR o.description ILIKE $${paramIndex})`)
       queryParams.push(`%${query.search}%`)
       paramIndex++
     }
 
-    // 分类筛选
-    if (query.category) {
-      baseConditions.push(`category = $${paramIndex}`)
-      queryParams.push(query.category)
+    // 系统筛选
+    if (query.systemId) {
+      baseConditions.push(`o.system_id = $${paramIndex}`)
+      queryParams.push(query.systemId)
       paramIndex++
     }
 
     // 状态筛选
     if (query.status) {
-      baseConditions.push(`status = $${paramIndex}`)
+      baseConditions.push(`o.status = $${paramIndex}`)
       queryParams.push(query.status)
       paramIndex++
     }
@@ -61,26 +61,30 @@ export class ObjectivesController extends BaseController {
     const whereClause = `WHERE ${baseConditions.join(' AND ')}`
 
     // 获取总数
-    const total = await this.getTotalCount('objectives', whereClause, queryParams)
+    const total = await this.getTotalCount('objectives o', whereClause, queryParams)
 
     // 获取目标列表
     const objectivesQuery = `
       SELECT 
-        id, title, description, category, status, progress, 
-        start_date, end_date, created_at, updated_at
-      FROM objectives 
+        o.id, o.title, o.description, o.system_id, o.status, o.progress, 
+        o.start_date, o.end_date, o.created_at, o.updated_at,
+        s.name as system_name, s.icon as system_icon, s.color as system_color
+      FROM objectives o
+      LEFT JOIN systems s ON o.system_id = s.id
       ${whereClause}
-      ORDER BY created_at DESC
+      ORDER BY o.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `
     
     const objectivesResult = await pool.query(objectivesQuery, [...queryParams, limit, offset])
 
-    const objectives: Objective[] = objectivesResult.rows.map(obj => ({
+    const objectives = objectivesResult.rows.map(obj => ({
       id: obj.id,
       title: obj.title,
       description: obj.description,
-      category: obj.category,
+      systemId: obj.system_id,
+      systemName: obj.system_name,
+      systemIcon: obj.system_icon,
       status: obj.status,
       progress: parseFloat(obj.progress),
       startDate: this.formatDate(obj.start_date),
@@ -109,11 +113,11 @@ export class ObjectivesController extends BaseController {
       throw createValidationError('无效的目标ID')
     }
 
-    // 获取目标详情（包含关键结果和任务）
     const objectiveQuery = `
       SELECT 
-        o.id, o.title, o.description, o.category, o.status, o.progress, 
+        o.id, o.title, o.description, o.system_id, o.status, o.progress, 
         o.start_date, o.end_date, o.created_at, o.updated_at,
+        s.name as system_name, s.icon as system_icon, s.color as system_color,
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
@@ -148,11 +152,13 @@ export class ObjectivesController extends BaseController {
           ) FILTER (WHERE t.id IS NOT NULL), '[]'
         ) as tasks
       FROM objectives o
+      LEFT JOIN systems s ON o.system_id = s.id
       LEFT JOIN key_results kr ON o.id = kr.objective_id
-      LEFT JOIN tasks t ON o.id = t.objective_id
+      LEFT JOIN tasks t ON kr.id = t.key_result_id
       WHERE o.id = $1 AND o.user_id = $2
-      GROUP BY o.id, o.title, o.description, o.category, o.status, o.progress,
-               o.start_date, o.end_date, o.created_at, o.updated_at
+      GROUP BY o.id, o.title, o.description, o.system_id, o.status, o.progress,
+               o.start_date, o.end_date, o.created_at, o.updated_at,
+               s.name, s.icon, s.color
     `
 
     const result = await pool.query(objectiveQuery, [id, userId])
@@ -168,7 +174,9 @@ export class ObjectivesController extends BaseController {
         id: objective.id,
         title: objective.title,
         description: objective.description,
-        category: objective.category,
+        systemId: objective.system_id,
+        systemName: objective.system_name,
+        systemIcon: objective.system_icon,
         status: objective.status,
         progress: parseFloat(objective.progress),
         startDate: this.formatDate(objective.start_date),
@@ -192,17 +200,15 @@ export class ObjectivesController extends BaseController {
     ValidationService.validateObjectiveCreation(createDto)
 
     const result = await this.executeTransaction(async (client) => {
-      // 创建目标
       const objectiveResult = await client.query(`
-        INSERT INTO objectives (user_id, title, description, category, start_date, end_date)
+        INSERT INTO objectives (user_id, title, description, system_id, start_date, end_date)
         VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, title, description, category, status, progress, start_date, end_date, created_at
-      `, [userId, createDto.title, createDto.description, createDto.category, createDto.startDate || null, createDto.endDate || null])
+        RETURNING id, title, description, system_id, status, progress, start_date, end_date, created_at
+      `, [userId, createDto.title, createDto.description, createDto.systemId, createDto.startDate || null, createDto.endDate || null])
 
       return objectiveResult.rows[0]
     })
 
-    // 记录操作日志
     this.logOperation('create', '目标', result.id, userId)
 
     const responseData = {
@@ -210,7 +216,7 @@ export class ObjectivesController extends BaseController {
         id: result.id,
         title: result.title,
         description: result.description,
-        category: result.category,
+        systemId: result.system_id,
         status: result.status,
         progress: parseFloat(result.progress),
         startDate: this.formatDate(result.start_date),
@@ -235,9 +241,9 @@ export class ObjectivesController extends BaseController {
     // 验证目标所有权
     await this.validateOwnership('objectives', id, userId, '目标')
 
-    // 验证更新数据
-    if (updateDto.category && !ValidationService.validateObjectiveCategory(updateDto.category)) {
-      throw createValidationError('无效的目标分类')
+    // 验证系统（如果要更新）
+    if (updateDto.systemId && !ValidationService.validateUUID(updateDto.systemId)) {
+      throw createValidationError('无效的所属系统')
     }
 
     if (updateDto.status && !ValidationService.validateObjectiveStatus(updateDto.status)) {
@@ -249,25 +255,23 @@ export class ObjectivesController extends BaseController {
     }
 
     const result = await this.executeTransaction(async (client) => {
-      // 更新目标
       const updateResult = await client.query(`
         UPDATE objectives 
         SET 
           title = COALESCE($1, title),
           description = COALESCE($2, description),
-          category = COALESCE($3, category),
+          system_id = COALESCE($3, system_id),
           status = COALESCE($4, status),
           start_date = COALESCE($5, start_date),
           end_date = COALESCE($6, end_date),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $7 AND user_id = $8
-        RETURNING id, title, description, category, status, progress, start_date, end_date, updated_at
-      `, [updateDto.title, updateDto.description, updateDto.category, updateDto.status, updateDto.startDate, updateDto.endDate, id, userId])
+        RETURNING id, title, description, system_id, status, progress, start_date, end_date, updated_at
+      `, [updateDto.title, updateDto.description, updateDto.systemId, updateDto.status, updateDto.startDate, updateDto.endDate, id, userId])
 
       return updateResult.rows[0]
     })
 
-    // 记录操作日志
     this.logOperation('update', '目标', id, userId)
 
     const responseData = {
@@ -275,7 +279,7 @@ export class ObjectivesController extends BaseController {
         id: result.id,
         title: result.title,
         description: result.description,
-        category: result.category,
+        systemId: result.system_id,
         status: result.status,
         progress: parseFloat(result.progress),
         startDate: this.formatDate(result.start_date),
@@ -296,17 +300,14 @@ export class ObjectivesController extends BaseController {
       throw createValidationError('无效的目标ID')
     }
 
-    // 验证目标所有权
     await this.validateOwnership('objectives', id, userId, '目标')
 
     await this.executeTransaction(async (client) => {
-      // 删除目标（级联删除关键结果和任务）
       await client.query('DELETE FROM objectives WHERE id = $1 AND user_id = $2', [id, userId])
     })
 
-    // 记录操作日志
     this.logOperation('delete', '目标', id, userId)
 
     res.json(this.buildSuccessResponse(null, '目标删除成功'))
   }
-} 
+}

@@ -56,7 +56,8 @@ export interface KeyResultDetailResponse extends KeyResultResponse {
   objective: {
     id: string
     title: string
-    category: string
+    systemId: string
+    systemName?: string
     status: string
   }
   tasks: TaskInfo[]

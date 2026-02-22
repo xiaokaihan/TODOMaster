@@ -34,10 +34,10 @@ export class ValidationService {
     return uuidRegex.test(uuid)
   }
 
-  // 目标分类验证（与数据库枚举保持一致）
-  static validateObjectiveCategory(category: string): boolean {
-    const validCategories = ['PERSONAL', 'PROFESSIONAL', 'HEALTH', 'LEARNING', 'FINANCIAL', 'RELATIONSHIP', 'CREATIVE', 'OTHER']
-    return validCategories.includes(category)
+  // 系统状态验证
+  static validateSystemStatus(status: string): boolean {
+    const validStatuses = ['ACTIVE', 'PAUSED', 'ARCHIVED']
+    return validStatuses.includes(status)
   }
 
   // 目标状态验证
@@ -179,7 +179,7 @@ export class ValidationService {
   static validateObjectiveCreation(data: { 
     title: string; 
     description?: string; 
-    category: string; 
+    systemId: string; 
     startDate?: string; 
     endDate?: string 
   }) {
@@ -193,8 +193,8 @@ export class ValidationService {
       errors.push('描述长度不能超过1000个字符')
     }
 
-    if (!data.category || !this.validateObjectiveCategory(data.category)) {
-      errors.push('无效的目标分类')
+    if (!data.systemId || !this.validateUUID(data.systemId)) {
+      errors.push('无效的所属系统')
     }
 
     if (data.startDate && data.endDate && !this.validateDateRange(data.startDate, data.endDate)) {

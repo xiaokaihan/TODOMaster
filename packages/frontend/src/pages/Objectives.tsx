@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Objective, ObjectiveCategory, Priority, ObjectiveStatus, KeyResult, CreateObjectiveDto, UpdateObjectiveDto, CreateKeyResultDto, UpdateKeyResultDto } from '@shared/types'
+import { Objective, System, Priority, ObjectiveStatus, KeyResult, CreateObjectiveDto, UpdateObjectiveDto, CreateKeyResultDto, UpdateKeyResultDto } from '@shared/types'
 import ObjectiveCard from '../components/ObjectiveCard'
 import ObjectiveForm from '../components/ObjectiveForm'
 import KeyResultForm from '../components/KeyResultForm'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { KeyResultCard } from '../components/KeyResultCard'
 import { ObjectiveService, ObjectiveListParams } from '../services/objectiveService'
+import { SystemService } from '../services/systemService'
 import { KeyResultService, updateKeyResultProgress } from '../services/keyResultService'
 import { showSuccess, handleApiError } from '../utils/notification'
 
@@ -13,9 +14,10 @@ const Objectives: React.FC = () => {
   const [objectives, setObjectives] = useState<Objective[]>([])
   const [keyResults, setKeyResults] = useState<Record<string, KeyResult[]>>({})
   const [selectedObjective, setSelectedObjective] = useState<Objective | null>(null)
+  const [systems, setSystems] = useState<System[]>([])
   const [filter, setFilter] = useState<{
     status?: ObjectiveStatus
-    category?: ObjectiveCategory
+    systemId?: string
     priority?: Priority
   }>({})
 
@@ -54,7 +56,7 @@ const Objectives: React.FC = () => {
         page: pagination.page,
         limit: pagination.limit,
         search: searchQuery || undefined,
-        category: filter.category,
+        systemId: filter.systemId,
         status: filter.status,
         priority: filter.priority,
         sortBy: sortBy,
@@ -88,6 +90,7 @@ const Objectives: React.FC = () => {
   // 初始加载
   useEffect(() => {
     loadObjectives()
+    SystemService.getSystems().then(setSystems).catch(console.error)
   }, [])
 
   // 搜索和过滤变化时重新加载
@@ -103,7 +106,7 @@ const Objectives: React.FC = () => {
   // 过滤和搜索目标（现在主要用于客户端排序和显示）
   const filteredAndSortedObjectives = objectives
     .filter((objective) => {
-      if (!searchQuery && !filter.status && !filter.category && !filter.priority) {
+      if (!searchQuery && !filter.status && !filter.systemId && !filter.priority) {
         return true;
       }
 
@@ -113,10 +116,10 @@ const Objectives: React.FC = () => {
       );
 
       const matchesStatus = !filter.status || objective.status === filter.status;
-      const matchesCategory = !filter.category || objective.category === filter.category;
+      const matchesSystem = !filter.systemId || objective.systemId === filter.systemId;
       const matchesPriority = !filter.priority || objective.priority === filter.priority;
 
-      const result = matchesSearch && matchesStatus && matchesCategory && matchesPriority;
+      const result = matchesSearch && matchesStatus && matchesSystem && matchesPriority;
       return result;
     })
     .sort((a, b) => {
@@ -464,22 +467,19 @@ const Objectives: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">系统</label>
             <select
-              value={filter.category || ''}
-              onChange={(e) => setFilter({ ...filter, category: e.target.value as ObjectiveCategory || undefined })}
+              value={filter.systemId || ''}
+              onChange={(e) => setFilter({ ...filter, systemId: e.target.value || undefined })}
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
-              <option value="">全部分类</option>
-              <option value={ObjectiveCategory.PERSONAL}>个人发展</option>
-              <option value={ObjectiveCategory.PROFESSIONAL}>职业发展</option>
-              <option value={ObjectiveCategory.HEALTH}>健康生活</option>
-              <option value={ObjectiveCategory.LEARNING}>学习成长</option>
-              <option value={ObjectiveCategory.FINANCIAL}>财务规划</option>
-              <option value={ObjectiveCategory.RELATIONSHIP}>人际关系</option>
-              <option value={ObjectiveCategory.CREATIVE}>创意项目</option>
-              <option value={ObjectiveCategory.OTHER}>其他</option>
+              <option value="">全部系统</option>
+              {systems.map(system => (
+                <option key={system.id} value={system.id}>
+                  {system.icon} {system.name}
+                </option>
+              ))}
             </select>
           </div>
 

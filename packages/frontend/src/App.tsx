@@ -5,6 +5,8 @@ import { AuthService } from './services/authService'
 
 // 页面组件
 import Dashboard from './pages/Dashboard'
+import Systems from './pages/Systems'
+import SystemDetail from './pages/SystemDetail'
 import Objectives from './pages/Objectives'
 import Tasks from './pages/Tasks'
 import { KeyResults } from './pages/KeyResults'
@@ -62,6 +64,8 @@ function App() {
             >
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="systems" element={<Systems />} />
+              <Route path="systems/:id" element={<SystemDetail />} />
               <Route path="objectives" element={<Objectives />} />
               <Route path="key-results" element={<KeyResults />} />
               <Route path="tasks" element={<Tasks />} />

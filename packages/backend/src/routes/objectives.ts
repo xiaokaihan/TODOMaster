@@ -15,30 +15,30 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
   const page = parseInt(req.query.page as string) || 1
   const limit = parseInt(req.query.limit as string) || 20
   const search = req.query.search as string || ''
-  const category = req.query.category as string || ''
+  const systemId = req.query.systemId as string || ''
   const status = req.query.status as string || ''
 
   const offset = (page - 1) * limit
 
   // 构建查询条件
-  let whereConditions = ['user_id = $1']
+  let whereConditions = ['o.user_id = $1']
   let queryParams: any[] = [req.user.id]
   let paramIndex = 2
 
   if (search) {
-    whereConditions.push(`(title ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`)
+    whereConditions.push(`(o.title ILIKE $${paramIndex} OR o.description ILIKE $${paramIndex})`)
     queryParams.push(`%${search}%`)
     paramIndex++
   }
 
-  if (category) {
-    whereConditions.push(`category = $${paramIndex}`)
-    queryParams.push(category)
+  if (systemId) {
+    whereConditions.push(`o.system_id = $${paramIndex}`)
+    queryParams.push(systemId)
     paramIndex++
   }
 
   if (status) {
-    whereConditions.push(`status = $${paramIndex}`)
+    whereConditions.push(`o.status = $${paramIndex}`)
     queryParams.push(status)
     paramIndex++
   }
@@ -46,18 +46,20 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
   const whereClause = `WHERE ${whereConditions.join(' AND ')}`
 
   // 获取总数
-  const countQuery = `SELECT COUNT(*) FROM objectives ${whereClause}`
+  const countQuery = `SELECT COUNT(*) FROM objectives o ${whereClause}`
   const countResult = await pool.query(countQuery, queryParams)
   const total = parseInt(countResult.rows[0].count)
 
-  // 获取目标列表
+  // 获取目标列表（含系统信息）
   const objectivesQuery = `
     SELECT 
-      id, title, description, category, status, progress, 
-      start_date, end_date, created_at, updated_at
-    FROM objectives 
+      o.id, o.title, o.description, o.system_id, o.status, o.progress, 
+      o.start_date, o.end_date, o.created_at, o.updated_at,
+      s.name as system_name, s.icon as system_icon, s.color as system_color
+    FROM objectives o
+    LEFT JOIN systems s ON o.system_id = s.id
     ${whereClause}
-    ORDER BY created_at DESC
+    ORDER BY o.created_at DESC
     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
   `
   
@@ -70,7 +72,10 @@ router.get('/', authenticate, asyncHandler(async (req: Request, res: Response) =
         id: obj.id,
         title: obj.title,
         description: obj.description,
-        category: obj.category,
+        systemId: obj.system_id,
+        systemName: obj.system_name,
+        systemIcon: obj.system_icon,
+        systemColor: obj.system_color,
         status: obj.status,
         progress: parseFloat(obj.progress),
         startDate: obj.start_date,
@@ -96,11 +101,12 @@ router.get('/:id', authenticate, asyncHandler(async (req: Request, res: Response
 
   const { id } = req.params
 
-  // 获取目标详情（包含关键结果和任务）
+  // 获取目标详情（包含系统信息、关键结果和任务）
   const objectiveQuery = `
     SELECT 
-      o.id, o.title, o.description, o.category, o.status, o.progress, 
+      o.id, o.title, o.description, o.system_id, o.status, o.progress, 
       o.start_date, o.end_date, o.created_at, o.updated_at,
+      s.name as system_name, s.icon as system_icon, s.color as system_color,
       COALESCE(
         json_agg(
           DISTINCT jsonb_build_object(
@@ -141,11 +147,13 @@ router.get('/:id', authenticate, asyncHandler(async (req: Request, res: Response
         ) FILTER (WHERE t.id IS NOT NULL), '[]'
       ) as tasks
     FROM objectives o
+    LEFT JOIN systems s ON o.system_id = s.id
     LEFT JOIN key_results kr ON o.id = kr.objective_id
     LEFT JOIN tasks t ON kr.id = t.key_result_id
     WHERE o.id = $1 AND o.user_id = $2
-    GROUP BY o.id, o.title, o.description, o.category, o.status, o.progress,
-             o.start_date, o.end_date, o.created_at, o.updated_at
+    GROUP BY o.id, o.title, o.description, o.system_id, o.status, o.progress,
+             o.start_date, o.end_date, o.created_at, o.updated_at,
+             s.name, s.icon, s.color
   `
 
   const result = await pool.query(objectiveQuery, [id, req.user.id])
@@ -163,7 +171,10 @@ router.get('/:id', authenticate, asyncHandler(async (req: Request, res: Response
         id: objective.id,
         title: objective.title,
         description: objective.description,
-        category: objective.category,
+        systemId: objective.system_id,
+        systemName: objective.system_name,
+        systemIcon: objective.system_icon,
+        systemColor: objective.system_color,
         status: objective.status,
         progress: parseFloat(objective.progress),
         startDate: objective.start_date,
@@ -183,11 +194,11 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
     throw createValidationError('用户信息不存在')
   }
 
-  const { title, description, category, startDate, endDate } = req.body
+  const { title, description, systemId, startDate, endDate } = req.body
 
   // 验证必填字段
-  if (!title || !category) {
-    throw createValidationError('标题和分类为必填项')
+  if (!title || !systemId) {
+    throw createValidationError('标题和所属系统为必填项')
   }
   
   // 验证标题长度
@@ -195,10 +206,13 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
     throw createValidationError('标题长度必须至少为3个字符')
   }
 
-  // 验证分类（与数据库枚举保持一致）
-  const validCategories = ['PERSONAL', 'PROFESSIONAL', 'HEALTH', 'LEARNING', 'FINANCIAL', 'RELATIONSHIP', 'CREATIVE', 'OTHER']
-  if (!validCategories.includes(category)) {
-    throw createValidationError('无效的目标分类')
+  // 验证系统是否存在且属于当前用户
+  const systemCheck = await pool.query(
+    'SELECT id FROM systems WHERE id = $1 AND user_id = $2',
+    [systemId, req.user.id]
+  )
+  if (systemCheck.rows.length === 0) {
+    throw createValidationError('无效的所属系统')
   }
 
   // 验证日期
@@ -213,16 +227,21 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
 
     // 创建目标
     const objectiveResult = await client.query(`
-      INSERT INTO objectives (user_id, title, description, category, start_date, end_date)
+      INSERT INTO objectives (user_id, title, description, system_id, start_date, end_date)
       VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, title, description, category, status, progress, start_date, end_date, created_at
-    `, [req.user.id, title.trim(), description, category, startDate || null, endDate || null])
+      RETURNING id, title, description, system_id, status, progress, start_date, end_date, created_at
+    `, [req.user.id, title.trim(), description, systemId, startDate || null, endDate || null])
 
     const objective = objectiveResult.rows[0]
 
+    // 获取系统信息
+    const systemInfo = await client.query(
+      'SELECT name, icon, color FROM systems WHERE id = $1',
+      [systemId]
+    )
+
     await client.query('COMMIT')
 
-    // 记录操作日志
     businessLogger.create('目标', objective.id, req.user.id)
 
     res.status(201).json({
@@ -233,7 +252,10 @@ router.post('/', authenticate, asyncHandler(async (req: Request, res: Response) 
           id: objective.id,
           title: objective.title,
           description: objective.description,
-          category: objective.category,
+          systemId: objective.system_id,
+          systemName: systemInfo.rows[0]?.name,
+          systemIcon: systemInfo.rows[0]?.icon,
+          systemColor: systemInfo.rows[0]?.color,
           status: objective.status,
           progress: parseFloat(objective.progress),
           startDate: objective.start_date,
@@ -258,7 +280,7 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
   }
 
   const { id } = req.params
-  const { title, description, category, status, startDate, endDate } = req.body
+  const { title, description, systemId, status, startDate, endDate } = req.body
 
   // 验证目标是否存在且属于当前用户
   const existingObjective = await pool.query(
@@ -270,15 +292,17 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
     throw createNotFoundError('目标')
   }
 
-  // 验证分类
-  if (category) {
-    const validCategories = ['PERSONAL', 'PROFESSIONAL', 'HEALTH', 'LEARNING', 'FINANCIAL', 'RELATIONSHIP', 'CREATIVE', 'OTHER']
-    if (!validCategories.includes(category)) {
-      throw createValidationError('无效的目标分类')
+  // 验证系统（如果要更新）
+  if (systemId) {
+    const systemCheck = await pool.query(
+      'SELECT id FROM systems WHERE id = $1 AND user_id = $2',
+      [systemId, req.user.id]
+    )
+    if (systemCheck.rows.length === 0) {
+      throw createValidationError('无效的所属系统')
     }
   }
 
-  console.log('status:', status)
   // 验证状态
   if (status) {
     const validStatuses = ['DRAFT', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED']
@@ -303,20 +327,25 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
       SET 
         title = COALESCE($1, title),
         description = COALESCE($2, description),
-        category = COALESCE($3, category),
+        system_id = COALESCE($3, system_id),
         status = COALESCE($4, status),
         start_date = COALESCE($5, start_date),
         target_date = COALESCE($6, target_date),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $7 AND user_id = $8
-      RETURNING id, title, description, category, status, progress, start_date, end_date, updated_at
-    `, [title, description, category, status, startDate, endDate, id, req.user.id])
+      RETURNING id, title, description, system_id, status, progress, start_date, end_date, updated_at
+    `, [title, description, systemId, status, startDate, endDate, id, req.user.id])
 
     const updatedObjective = updateResult.rows[0]
 
+    // 获取系统信息
+    const systemInfo = await client.query(
+      'SELECT name, icon, color FROM systems WHERE id = $1',
+      [updatedObjective.system_id]
+    )
+
     await client.query('COMMIT')
 
-    // 记录操作日志
     businessLogger.update('目标', id, req.user.id)
 
     res.json({
@@ -327,7 +356,10 @@ router.put('/:id', authenticate, asyncHandler(async (req: Request, res: Response
           id: updatedObjective.id,
           title: updatedObjective.title,
           description: updatedObjective.description,
-          category: updatedObjective.category,
+          systemId: updatedObjective.system_id,
+          systemName: systemInfo.rows[0]?.name,
+          systemIcon: systemInfo.rows[0]?.icon,
+          systemColor: systemInfo.rows[0]?.color,
           status: updatedObjective.status,
           progress: parseFloat(updatedObjective.progress),
           startDate: updatedObjective.start_date,
@@ -373,7 +405,6 @@ router.delete('/:id', authenticate, asyncHandler(async (req: Request, res: Respo
 
     await client.query('COMMIT')
 
-    // 记录操作日志
     businessLogger.delete('目标', id, req.user.id)
 
     res.json({
@@ -389,4 +420,4 @@ router.delete('/:id', authenticate, asyncHandler(async (req: Request, res: Respo
   }
 }))
 
-export default router 
+export default router

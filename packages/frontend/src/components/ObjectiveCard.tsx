@@ -1,5 +1,5 @@
 import React from 'react'
-import { Objective, ObjectiveStatus, Priority, ObjectiveCategory } from '@shared/types'
+import { Objective, ObjectiveStatus, Priority } from '@shared/types'
 import { getObjectiveStatusLabel, getPriorityLabel, getPriorityColor } from '@shared/utils'
 
 interface ObjectiveCardProps {
@@ -26,20 +26,6 @@ const ObjectiveCard: React.FC<ObjectiveCardProps> = ({
     return colors[status]
   }
 
-  const getCategoryIcon = (category: ObjectiveCategory) => {
-    const icons = {
-      [ObjectiveCategory.PERSONAL]: '👤',
-      [ObjectiveCategory.PROFESSIONAL]: '💼',
-      [ObjectiveCategory.HEALTH]: '💪',
-      [ObjectiveCategory.LEARNING]: '📚',
-      [ObjectiveCategory.FINANCIAL]: '💰',
-      [ObjectiveCategory.RELATIONSHIP]: '❤️',
-      [ObjectiveCategory.CREATIVE]: '🎨',
-      [ObjectiveCategory.OTHER]: '📋',
-    }
-    return icons[category] || '📋'
-  }
-
   const getPriorityIcon = (priority: Priority) => {
     const icons = {
       [Priority.LOW]: '🟢',
@@ -50,7 +36,6 @@ const ObjectiveCard: React.FC<ObjectiveCardProps> = ({
     return icons[priority]
   }
 
-  // 修改日期处理逻辑
   const formatLocalDate = (date: string | Date) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     const year = dateObj.getFullYear();
@@ -75,7 +60,6 @@ const ObjectiveCard: React.FC<ObjectiveCardProps> = ({
   const isCompleted = objective.status === ObjectiveStatus.COMPLETED;
   const progress = objective.progress || 0;
 
-  // 计算剩余天数
   const getDaysRemaining = () => {
     if (!objective.targetDate) return null;
     const targetDate = new Date(formatLocalDate(objective.targetDate));
@@ -93,7 +77,7 @@ const ObjectiveCard: React.FC<ObjectiveCardProps> = ({
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
-            <span className="text-lg">{getCategoryIcon(objective.category)}</span>
+            <span className="text-lg">{objective.systemIcon || '📋'}</span>
             <span className="text-lg">{getPriorityIcon(objective.priority)}</span>
             <h3 className={`text-lg font-semibold ${isCompleted ? 'line-through text-gray-500' : 'text-gray-900'}`}>
               {objective.title}
@@ -112,6 +96,14 @@ const ObjectiveCard: React.FC<ObjectiveCardProps> = ({
             >
               {getPriorityLabel(objective.priority)}
             </span>
+            {objective.systemName && (
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{ backgroundColor: `${objective.systemColor || '#6366F1'}20`, color: objective.systemColor || '#6366F1' }}
+              >
+                {objective.systemName}
+              </span>
+            )}
             {isOverdue && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                 逾期
@@ -221,7 +213,6 @@ const ObjectiveCard: React.FC<ObjectiveCardProps> = ({
             </div>
           </div>
           
-          {/* 任务进度条 */}
           <div className="mt-2">
             <div className="w-full bg-gray-200 rounded-full h-1">
               <div
@@ -246,4 +237,4 @@ const ObjectiveCard: React.FC<ObjectiveCardProps> = ({
   )
 }
 
-export default ObjectiveCard 
+export default ObjectiveCard

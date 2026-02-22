@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ObjectiveCategory, Priority, ObjectiveStatus, TaskStatus } from '../types';
+import { SystemStatus, Priority, ObjectiveStatus, TaskStatus } from '../types';
 
 // 基础验证规则
 export const emailSchema = z.string().email('邮箱格式不正确');
@@ -20,11 +20,28 @@ export const registerSchema = z.object({
   lastName: z.string().optional(),
 });
 
+// 系统相关验证
+export const createSystemSchema = z.object({
+  name: z.string().min(2, '系统名称不能少于2个字符').max(100, '系统名称不能超过100字符'),
+  description: z.string().max(2000, '系统描述不能超过2000字符').optional(),
+  icon: z.string().max(10, '图标不能超过10字符').optional(),
+  color: z.string().max(20, '颜色不能超过20字符').optional(),
+});
+
+export const updateSystemSchema = z.object({
+  name: z.string().min(2, '系统名称不能少于2个字符').max(100, '系统名称不能超过100字符').optional(),
+  description: z.string().max(2000, '系统描述不能超过2000字符').optional(),
+  icon: z.string().max(10).optional(),
+  color: z.string().max(20).optional(),
+  status: z.nativeEnum(SystemStatus).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
 // 目标相关验证
 export const createObjectiveSchema = z.object({
   title: z.string().min(3, '目标标题不能少于3个字符').max(200, '目标标题不能超过200字符'),
   description: z.string().max(2000, '目标描述不能超过2000字符').optional(),
-  category: z.nativeEnum(ObjectiveCategory, { errorMap: () => ({ message: '请选择有效的目标分类' }) }),
+  systemId: z.string().uuid('请选择有效的所属系统'),
   priority: z.nativeEnum(Priority, { errorMap: () => ({ message: '请选择有效的优先级' }) }),
   startDate: z.date({ errorMap: () => ({ message: '请选择有效的开始日期' }) }),
   targetDate: z.date().optional(),
@@ -39,7 +56,7 @@ export const createObjectiveSchema = z.object({
 export const updateObjectiveSchema = z.object({
   title: z.string().min(1, '目标标题不能为空').max(200, '目标标题不能超过200字符').optional(),
   description: z.string().max(2000, '目标描述不能超过2000字符').optional(),
-  category: z.nativeEnum(ObjectiveCategory).optional(),
+  systemId: z.string().uuid().optional(),
   priority: z.nativeEnum(Priority).optional(),
   status: z.nativeEnum(ObjectiveStatus).optional(),
   startDate: z.date().optional(),
@@ -78,9 +95,14 @@ export const paginationSchema = z.object({
 });
 
 // 查询参数验证
+export const systemQuerySchema = z.object({
+  status: z.nativeEnum(SystemStatus).optional(),
+  search: z.string().max(100).optional(),
+});
+
 export const objectiveQuerySchema = z.object({
   status: z.nativeEnum(ObjectiveStatus).optional(),
-  category: z.nativeEnum(ObjectiveCategory).optional(),
+  systemId: z.string().uuid().optional(),
   priority: z.nativeEnum(Priority).optional(),
   search: z.string().max(100).optional(),
 }).merge(paginationSchema);
@@ -96,10 +118,13 @@ export const taskQuerySchema = z.object({
 // 导出类型
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+export type CreateSystemInput = z.infer<typeof createSystemSchema>;
+export type UpdateSystemInput = z.infer<typeof updateSystemSchema>;
 export type CreateObjectiveInput = z.infer<typeof createObjectiveSchema>;
 export type UpdateObjectiveInput = z.infer<typeof updateObjectiveSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
+export type SystemQueryInput = z.infer<typeof systemQuerySchema>;
 export type ObjectiveQueryInput = z.infer<typeof objectiveQuerySchema>;
-export type TaskQueryInput = z.infer<typeof taskQuerySchema>; 
+export type TaskQueryInput = z.infer<typeof taskQuerySchema>;

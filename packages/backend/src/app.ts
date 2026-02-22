@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { logger } from './middleware/logger'
 import authRoutes from './routes/auth'
 import userRoutes from './routes/users'
+import systemRoutes from './routes/systems'
 import objectiveRoutes from './routes/objectives'
 import keyResultRoutes from './routes/keyResults'
 import taskRoutes from './routes/tasks'
@@ -104,6 +105,7 @@ const apiPrefix = '/api'
 
 app.use(`${apiPrefix}/auth`, authRoutes)
 app.use(`${apiPrefix}/users`, userRoutes)
+app.use(`${apiPrefix}/systems`, systemRoutes)
 app.use(`${apiPrefix}/objectives`, objectiveRoutes)
 app.use(`${apiPrefix}/key-results`, keyResultRoutes)
 app.use(`${apiPrefix}/tasks`, taskRoutes)
@@ -119,6 +121,7 @@ app.get(apiPrefix, (req: Request, res: Response) => {
     endpoints: {
       auth: `${apiPrefix}/auth`,
       users: `${apiPrefix}/users`,
+      systems: `${apiPrefix}/systems`,
       objectives: `${apiPrefix}/objectives`,
       keyResults: `${apiPrefix}/key-results`,
       tasks: `${apiPrefix}/tasks`,

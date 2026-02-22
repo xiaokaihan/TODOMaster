@@ -1,13 +1,14 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from 'react-query'
-import { Objective, Task, ObjectiveStatus, TaskStatus, Priority, KeyResult, KeyResultType, KeyResultStatus } from '@shared/types'
+import { Objective, Task, System, ObjectiveStatus, TaskStatus, KeyResult, KeyResultType, KeyResultStatus } from '@shared/types'
 import { formatDate, formatDateTime, getObjectiveStatusLabel, getTaskStatusLabel } from '@shared/utils'
 import ObjectiveCard from '../components/ObjectiveCard'
 import TaskCard from '../components/TaskCard'
 import { KeyResultCard } from '../components/KeyResultCard'
 import { getDashboardStats } from '../services/statsService'
 import { ObjectiveService } from '../services/objectiveService'
+import { SystemService } from '../services/systemService'
 import { TaskService } from '../services/taskService'
 import { KeyResultService } from '../services/keyResultService'
 import { useMutation, useQueryClient } from 'react-query'
@@ -18,6 +19,7 @@ import { showSuccess, handleApiError } from '../utils/notification'
 
 const Dashboard: React.FC = () => {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [selectedView, setSelectedView] = useState<'overview' | 'objectives' | 'tasks' | 'keyResults'>('overview')
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
   const [isObjectiveFormOpen, setIsObjectiveFormOpen] = useState(false)
@@ -52,10 +54,18 @@ const Dashboard: React.FC = () => {
     { staleTime: 5 * 60 * 1000 }
   )
 
+  // 获取系统列表
+  const { data: systemsData } = useQuery(
+    'systems',
+    () => SystemService.getSystems(),
+    { staleTime: 5 * 60 * 1000 }
+  )
+
   // 处理数据
   const objectives = objectivesData?.data || []
   const tasks = tasksData?.tasks || []
   const keyResults = keyResultsData?.data || []
+  const systems: System[] = systemsData || []
   const overview = statsData?.overview
 
   // 计算统计数据
@@ -447,6 +457,72 @@ const Dashboard: React.FC = () => {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 系统概览（overview 视图下方） */}
+      {selectedView === 'overview' && systems.length > 0 && !isLoading && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">系统概览</h2>
+            <Link to="/systems" className="text-blue-600 hover:text-blue-800 text-sm">管理系统</Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {systems.map((system: System) => {
+              const progress = system.overallProgress || 0
+              const radius = 28
+              const circumference = 2 * Math.PI * radius
+              const strokeDashoffset = circumference - (progress / 100) * circumference
+
+              return (
+                <div
+                  key={system.id}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => navigate(`/systems/${system.id}`)}
+                >
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
+                      style={{ backgroundColor: `${system.color || '#6366F1'}20` }}
+                    >
+                      {system.icon || '📋'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{system.name}</h3>
+                      <p className="text-xs text-gray-500">
+                        {system.objectiveCount || 0} 个目标 · {system.activeObjectiveCount || 0} 进行中
+                      </p>
+                    </div>
+                    <div className="relative w-14 h-14 flex-shrink-0">
+                      <svg className="w-14 h-14 -rotate-90" viewBox="0 0 64 64">
+                        <circle cx="32" cy="32" r={radius} fill="none" stroke="#E5E7EB" strokeWidth="5" />
+                        <circle
+                          cx="32" cy="32" r={radius} fill="none"
+                          stroke={system.color || '#6366F1'}
+                          strokeWidth="5" strokeLinecap="round"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={strokeDashoffset}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xs font-bold text-gray-700">{progress}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* 迷你进度条 */}
+                  <div className="flex items-center space-x-2 text-xs text-gray-500">
+                    <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className="h-1.5 rounded-full"
+                        style={{ width: `${progress}%`, backgroundColor: system.color || '#6366F1' }}
+                      />
+                    </div>
+                    <span className="font-medium text-green-600">{system.completedObjectiveCount || 0} 完成</span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
